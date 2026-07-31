@@ -2,20 +2,41 @@
 
 import Link from "next/link";
 import { useForm } from "react-hook-form";
+import { authApi } from "../api/auth.api";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, LoginFormData } from "../schemas/login.schema";
 
-type LoginFormData = {
-  email: string;
-  password: string;
-};
-const Login = () => {
+// type LoginFormData = {
+//   email: string;
+//   password: string;
+// };
+const SignIn = () => {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>();
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    mode: "onBlur",
+  });
 
-  const onSubmit = (data) => {
-    console.log(data);
+  const { mutate, isPending } = useMutation({
+    mutationFn: authApi.login,
+
+    onSuccess: (response) => {
+      localStorage.setItem("token", response.data.token);
+      toast.success(response.message);
+    },
+
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Something went wrong");
+    },
+  });
+
+  const onSubmit = (data: LoginFormData) => {
+    mutate(data);
   };
   return (
     <div className="w-screen h-screen flex justify-center items-center bg-gray-900 p-8 border-r border-dashed">
@@ -82,4 +103,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SignIn;
