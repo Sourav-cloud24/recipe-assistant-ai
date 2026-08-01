@@ -1,6 +1,6 @@
 import { createUser, findUserByEmail } from "./auth.repository.js";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 
 export const registerUser = async ({ fullname, email, password }) => {
   const existingUser = await findUserByEmail(email);
@@ -35,21 +35,21 @@ export const loginUser = async ({ email, password }) => {
 
   const token = jwt.sign(
     {
-        userId: user.id,
-        email: user.email
+      userId: user.id,
+      email: user.email,
     },
     process.env.JWT_SECRET,
     {
-        expiresIn: process.env.JWT_EXPIRES_IN,
-    }
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    },
   );
 
   return {
     user: {
-        id: user.id,
-        fullname: user.fullname,
-        email: user.email
+      id: user.id,
+      fullname: user.fullname,
+      email: user.email,
     },
-    token
-  }
+    token,
+  };
 };

@@ -1,3 +1,5 @@
+import PantryContainer from "@/features/pantry/components/PantryContainer";
+
 export default function Page() {
-  return <h1>Pantry</h1>;
+  return <PantryContainer />;
 }

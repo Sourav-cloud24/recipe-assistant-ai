@@ -60,20 +60,33 @@ export default function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar className="border-r bg-white">
+    <Sidebar
+      className="border-r"
+      style={{
+        backgroundColor: "var(--color-parchment)",
+        color: "var(--color-ink)",
+        borderRightColor: "var(--color-accent-soft)",
+      }}
+    >
       {/* Logo */}
-      <SidebarHeader className="border-b px-6 py-5">
+      <SidebarHeader
+        className="border-b px-6 py-5"
+        style={{ borderBottomColor: "var(--color-accent-soft)" }}
+      >
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-600 text-white shadow">
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-(--color-parchment) shadow"
+            style={{ backgroundColor: "var(--color-accent)" }}
+          >
             🍽️
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-lg font-bold text-(--color-ink)">
               Recipe Assistant
             </h2>
 
-            <p className="text-xs text-gray-500">
+            <p className="text-xs" style={{ color: "var(--color-accent)" }}>
               AI Powered Cooking
             </p>
           </div>
@@ -89,22 +102,16 @@ export default function AppSidebar() {
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
-                  
                   isActive={active}
                   className={`mb-1 h-11 rounded-xl transition-all ${
                     active
-                      ? "bg-green-100 text-green-700"
-                      : "hover:bg-gray-100"
+                      ? "bg-(--color-accent) text-(--color-parchment)"
+                      : "hover:bg-(--color-accent-soft)] hover:text-(--color-accent)"
                   }`}
                 >
-                  <Link
-                    href={item.url}
-                    className="flex items-center gap-3"
-                  >
+                  <Link href={item.url} className="flex items-center gap-3">
                     <item.icon className="h-5 w-5" />
-                    <span className="font-medium">
-                      {item.title}
-                    </span>
+                    <span className="font-medium">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -114,25 +121,43 @@ export default function AppSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t p-4">
-        <div className="rounded-xl border bg-gray-50 p-3">
+      <SidebarFooter
+        className="border-t p-4"
+        style={{ borderTopColor: "var(--color-accent-soft)" }}
+      >
+        <div
+          className="rounded-xl border p-3"
+          style={{
+            backgroundColor: "var(--color-surface-muted)",
+            borderColor: "var(--color-accent-soft)",
+          }}
+        >
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-green-600 text-white">
+            <div
+              className="flex h-11 w-11 items-center justify-center rounded-full text-(--color-parchment)"
+              style={{ backgroundColor: "var(--color-accent)" }}
+            >
               <User size={18} />
             </div>
 
             <div className="flex-1">
-              <p className="text-sm font-semibold">
+              <p className="text-sm font-semibold text-(--color-ink)">
                 Sourav Dash
               </p>
 
-              <p className="text-xs text-gray-500">
+              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
                 Software Developer
               </p>
             </div>
           </div>
 
-          <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border py-2 text-sm font-medium transition hover:bg-red-50 hover:text-red-600">
+          <button
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border py-2 text-sm font-medium transition hover:bg-(--color-accent-soft)"
+            style={{
+              borderColor: "var(--color-accent-soft)",
+              color: "var(--color-accent)",
+            }}
+          >
             <LogOut size={16} />
             Logout
           </button>

@@ -7,11 +7,8 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, LoginFormData } from "../schemas/login.schema";
+import { useRouter } from "next/navigation";
 
-// type LoginFormData = {
-//   email: string;
-//   password: string;
-// };
 const SignIn = () => {
   const {
     register,
@@ -22,12 +19,15 @@ const SignIn = () => {
     mode: "onBlur",
   });
 
+  const router = useRouter()
+
   const { mutate, isPending } = useMutation({
     mutationFn: authApi.login,
 
     onSuccess: (response) => {
       localStorage.setItem("token", response.data.token);
       toast.success(response.message);
+      router.push("/dashboard")
     },
 
     onError: (error: any) => {
