@@ -1,4 +1,5 @@
 import { errorResponse, successResponse } from "../../utils/response.js";
+import { addPantryItem, getUserPantryItems } from "./pantry.service.js";
 
 export const createPantry = async (req, res) => {
     try {
@@ -6,6 +7,7 @@ export const createPantry = async (req, res) => {
             user_id: req.user.userId,
             ...req.body,
         });
+        console.log("Created pantry item:", pantryItem);
 
         return successResponse(res, {
             statusCode: 201,

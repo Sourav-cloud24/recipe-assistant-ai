@@ -17,7 +17,7 @@ export const createPantryItem = async ({
         unit,
         category,
         expiry_date,
-        is_low_stock,
+        is_low_stock
     )
     VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING *;
@@ -46,6 +46,7 @@ export const getPantryItems = async (user_id) => {
   `;
 
   const { rows } = await pool.query(query, [user_id]);
+  console.log("Retrieved pantry items:", rows); 
 
   return rows;
 };

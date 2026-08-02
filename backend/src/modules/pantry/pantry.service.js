@@ -1,4 +1,4 @@
-import { createPantryItem, getPantryItems } from "./pantry.repository";
+import { createPantryItem, getPantryItems } from "./pantry.repository.js";
 
 export const addPantryItem = async ({
   user_id,
@@ -32,6 +32,7 @@ export const addPantryItem = async ({
 
 export const getUserPantryItems = async (user_id) => {
   const pantryItems = await getPantryItems(user_id);
+  console.log("Retrieved user pantry items:", pantryItems);
   
   return pantryItems;
 }
