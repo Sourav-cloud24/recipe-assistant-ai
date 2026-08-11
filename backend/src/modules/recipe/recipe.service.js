@@ -1,8 +1,19 @@
-import { createRecipe } from "./recipe.repository.js"
+import { createRecipe, getRecipeById, getSavedRecipes } from "./recipe.repository.js"
 
 
 export const saveRecipe = async (recipeData) => {
-    const recipe = await craeteRecipeController(recipeData)
+    const recipe = await createRecipe(recipeData)
 
     return recipe
 }
+
+export const getAllSavedRecipes = async (user_id) => {
+  return await getSavedRecipes({ user_id });
+};
+
+export const getRecipeDetails = async ({ id, user_id }) => {
+  return await getRecipeById({
+    id,
+    user_id,
+  });
+};

@@ -52,7 +52,7 @@ const SignIn = () => {
               type="email"
               placeholder="Enter your email"
               {...register("email")}
-              className="w-full rounded-lg border border-gray-300 p-3 outline-none transition focus:border-green-500"
+              className="w-full rounded-lg text-black border border-gray-300 p-3 outline-none transition focus:border-green-500"
             />
 
             {errors.email && (
@@ -72,7 +72,7 @@ const SignIn = () => {
               type="password"
               placeholder="Enter your password"
               {...register("password")}
-              className="w-full rounded-lg border border-gray-300 p-3 outline-none transition focus:border-green-500"
+              className="w-full rounded-lg border border-gray-300 p-3 text-black outline-none transition focus:border-green-500"
             />
 
             {errors.password && (

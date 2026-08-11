@@ -40,6 +40,11 @@ const menuItems = [
     icon: ChefHat,
   },
   {
+    title: "My Recipes",
+    url: "/my-recipes",
+    icon: ChefHat,
+  },
+  {
     title: "Meal Planner",
     url: "/meal-plan",
     icon: CalendarDays,
@@ -63,30 +68,30 @@ export default function AppSidebar() {
     <Sidebar
       className="border-r"
       style={{
-        backgroundColor: "var(--color-parchment)",
-        color: "var(--color-ink)",
-        borderRightColor: "var(--color-accent-soft)",
+        backgroundColor: "var(--sidebar)",
+        color: "var(--sidebar-foreground)",
+        borderRightColor: "var(--border)",
       }}
     >
       {/* Logo */}
       <SidebarHeader
         className="border-b px-6 py-5"
-        style={{ borderBottomColor: "var(--color-accent-soft)" }}
+        style={{ borderBottomColor: "var(--border)" }}
       >
         <div className="flex items-center gap-3">
           <div
-            className="flex h-11 w-11 items-center justify-center rounded-xl text-(--color-parchment) shadow"
-            style={{ backgroundColor: "var(--color-accent)" }}
+            className="flex h-11 w-11 items-center justify-center rounded-xl shadow"
+            style={{ backgroundColor: "var(--primary)", color: "var(--text)" }}
           >
             🍽️
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-(--color-ink)">
+            <h2 className="text-lg font-bold" style={{ color: "var(--sidebar-foreground)" }}>
               Recipe Assistant
             </h2>
 
-            <p className="text-xs" style={{ color: "var(--color-accent)" }}>
+            <p className="text-xs" style={{ color: "var(--primary)" }}>
               AI Powered Cooking
             </p>
           </div>
@@ -103,11 +108,17 @@ export default function AppSidebar() {
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   isActive={active}
-                  className={`mb-1 h-11 rounded-xl transition-all ${
+                  className="mb-1 h-11 rounded-xl transition-all hover:bg-(--primary)/10"
+                  style={
                     active
-                      ? "bg-(--color-accent) text-(--color-parchment)"
-                      : "hover:bg-(--color-accent-soft)] hover:text-(--color-accent)"
-                  }`}
+                      ? {
+                          backgroundColor: "var(--primary)",
+                          color: "var(--text)",
+                        }
+                      : {
+                          color: "var(--sidebar-foreground)",
+                        }
+                  }
                 >
                   <Link href={item.url} className="flex items-center gap-3">
                     <item.icon className="h-5 w-5" />
@@ -123,39 +134,39 @@ export default function AppSidebar() {
       {/* Footer */}
       <SidebarFooter
         className="border-t p-4"
-        style={{ borderTopColor: "var(--color-accent-soft)" }}
+        style={{ borderTopColor: "var(--border)" }}
       >
         <div
           className="rounded-xl border p-3"
           style={{
-            backgroundColor: "var(--color-surface-muted)",
-            borderColor: "var(--color-accent-soft)",
+            backgroundColor: "var(--sidebar)",
+            borderColor: "var(--border)",
           }}
         >
           <div className="flex items-center gap-3">
             <div
-              className="flex h-11 w-11 items-center justify-center rounded-full text-(--color-parchment)"
-              style={{ backgroundColor: "var(--color-accent)" }}
+              className="flex h-11 w-11 items-center justify-center rounded-full"
+              style={{ backgroundColor: "var(--primary)", color: "var(--text)" }}
             >
               <User size={18} />
             </div>
 
             <div className="flex-1">
-              <p className="text-sm font-semibold text-(--color-ink)">
+              <p className="text-sm font-semibold" style={{ color: "var(--sidebar-foreground)" }}>
                 Sourav Dash
               </p>
 
-              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>
                 Software Developer
               </p>
             </div>
           </div>
 
           <button
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border py-2 text-sm font-medium transition hover:bg-(--color-accent-soft)"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border py-2 text-sm font-medium transition hover:bg-(--primary)/10"
             style={{
-              borderColor: "var(--color-accent-soft)",
-              color: "var(--color-accent)",
+              borderColor: "var(--border)",
+              color: "var(--primary)",
             }}
           >
             <LogOut size={16} />

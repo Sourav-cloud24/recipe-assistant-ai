@@ -11,10 +11,10 @@ export default function DashboardLayout({
     <>
       <AppSidebar />
 
-      <SidebarInset className="bg-(--color-ink) text-(--color-parchment)">
+      <SidebarInset className="bg-[#102016] text-(--text)">
         <AppNavbar />
 
-        <main className="flex-1 min-h-screen bg-(--color-ink) p-6 text-(--color-parchment)">
+        <main className="flex-1 min-h-screen bg-[#102016] p-6 text-(--text)">
           {children}
         </main>
       </SidebarInset>

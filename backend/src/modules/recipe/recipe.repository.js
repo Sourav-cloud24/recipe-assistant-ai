@@ -117,3 +117,120 @@ export const createRecipe = async ({
     client.release();
   }
 };
+
+export const getSavedRecipes = async ({ user_id }) => {
+  const query = `
+    SELECT
+      id,
+      title,
+      description,
+      cuisine,
+      diet,
+      cooking_time,
+      servings,
+      created_at
+    FROM recipes
+    WHERE user_id = $1
+    ORDER BY created_at DESC;
+  `;
+
+  const { rows } = await pool.query(query, [user_id]);
+
+  return rows;
+};
+
+export const getRecipeById = async ({ id, user_id }) => {
+  const client = await pool.connect();
+
+  try {
+    // 1. Get main recipe
+    const recipeQuery = `
+      SELECT
+        id,
+        user_id,
+        title,
+        description,
+        cuisine,
+        diet,
+        cooking_time,
+        servings,
+        created_at,
+        updated_at
+      FROM recipes
+      WHERE id = $1
+        AND user_id = $2;
+    `;
+
+    const { rows: recipeRows } = await client.query(recipeQuery, [
+      id,
+      user_id,
+    ]);
+
+    if (recipeRows.length === 0) {
+      return null;
+    }
+
+    const recipe = recipeRows[0];
+
+    // 2. Get ingredients
+    const ingredientsQuery = `
+      SELECT
+        id,
+        ingredient_name AS name,
+        quantity,
+        unit
+      FROM recipe_ingredients
+      WHERE recipe_id = $1
+      ORDER BY id;
+    `;
+
+    const { rows: ingredients } = await client.query(
+      ingredientsQuery,
+      [id]
+    );
+
+    // 3. Get instructions
+    const instructionsQuery = `
+      SELECT
+        id,
+        step_number,
+        instruction
+      FROM recipe_instructions
+      WHERE recipe_id = $1
+      ORDER BY step_number;
+    `;
+
+    const { rows: instructions } = await client.query(
+      instructionsQuery,
+      [id]
+    );
+
+    // 4. Get nutrition
+    const nutritionQuery = `
+      SELECT
+        calories,
+        protein,
+        carbohydrates,
+        fat
+      FROM recipe_nutrition
+      WHERE recipe_id = $1;
+    `;
+
+    const { rows: nutritionRows } = await client.query(
+      nutritionQuery,
+      [id]
+    );
+
+    return {
+      ...recipe,
+
+      ingredients,
+
+      instructions,
+
+      nutrition: nutritionRows[0] || null,
+    };
+  } finally {
+    client.release();
+  }
+};

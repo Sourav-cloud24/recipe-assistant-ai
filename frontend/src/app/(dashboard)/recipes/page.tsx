@@ -1,3 +1,7 @@
+import AiRecipeContainer from "@/features/recipes/components/AiRecipeContainer";
+
 export default function Page() {
-  return <h1>Recipe</h1>;
+  return <div>
+    <AiRecipeContainer/>
+  </div>;
 }
