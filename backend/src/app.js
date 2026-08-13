@@ -6,6 +6,7 @@ import authRoutes from "./modules/auth/auth.routes.js"
 import pantryRoutes from "./modules/pantry/pantry.routes.js"
 import aiRoutes from "./modules/ai/ai.routes.js"
 import recipeRoutes from "./modules/recipe/recipe.routes.js"
+import mealPlanRoutes from "./modules/meal-planner/meal-planner.routes.js"
 
 dotenv.config()
 
@@ -18,6 +19,7 @@ app.use("/api/v1/auth", authRoutes)
 app.use("/api/v1/pantry", pantryRoutes)
 app.use("/api/v1/ai", aiRoutes)
 app.use("/api/v1/recipes", recipeRoutes)
+app.use("/api/v1/meal-plan", mealPlanRoutes)
 
 app.get("/", (req, res) => {
     res.json({

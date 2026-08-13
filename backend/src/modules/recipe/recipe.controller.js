@@ -1,5 +1,10 @@
 import { errorResponse, successResponse } from "../../utils/response.js";
-import { getAllSavedRecipes, getRecipeDetails, saveRecipe } from "./recipe.service.js";
+import {
+  getAllSavedRecipes,
+  getRecipeDetails,
+  removeRecipe,
+  saveRecipe,
+} from "./recipe.service.js";
 
 export const craeteRecipeController = async (req, res) => {
   try {
@@ -91,6 +96,45 @@ export const getRecipeDetailsController = async (req, res) => {
     });
   } catch (error) {
     console.error("Get recipe details error:", error);
+
+    return errorResponse(res, {
+      statusCode: 500,
+      message: error.message,
+    });
+  }
+};
+
+export const deleteRecipeController = async (req, res) => {
+  try {
+    const recipeId = Number(req.params.id);
+    const userId = req.user.id;
+
+    if (!Number.isInteger(recipeId) || recipeId <= 0) {
+      return errorResponse(res, {
+        statusCode: 400,
+        message: "Invalid recipe ID",
+      });
+    }
+
+    const deletedRecipe = await removeRecipe({
+      id: recipeId,
+      user_id: userId,
+    });
+
+    if (!deletedRecipe) {
+      return errorResponse(res, {
+        statusCode: 404,
+        message: "Recipe not found",
+      });
+    }
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: "Recipe deleted successfully",
+      data: deletedRecipe,
+    });
+  } catch (error) {
+    console.error("Delete recipe error:", error);
 
     return errorResponse(res, {
       statusCode: 500,

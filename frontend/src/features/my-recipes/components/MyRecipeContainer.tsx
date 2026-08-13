@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRecipes } from "../hooks/useRecipes"; 
 import { useRouter } from "next/navigation";
+import { useDeleteRecipe } from "../hooks/useDeleteRecipe";
 
 const MyRecipeContainer = () => {
   const [search, setSearch] = useState("");
@@ -17,6 +18,7 @@ const MyRecipeContainer = () => {
 
   const recipes = recipeResponse?.data ?? [];
   const router = useRouter()
+  const deleteRecipehook = useDeleteRecipe();
 
   // Search + sort
   const filteredRecipes = useMemo(() => {
@@ -33,6 +35,11 @@ const MyRecipeContainer = () => {
         : dateA - dateB;
     });
   }, [recipes, search, sort]);
+
+  const deleteRecipe = (id:number) => {
+    if (!id) return;
+    deleteRecipehook.mutate(id)
+  }
 
   if (isLoading) {
     return (
@@ -142,7 +149,7 @@ const MyRecipeContainer = () => {
 
         {/* Empty State */}
         {filteredRecipes.length === 0 && (
-          <div className="flex min-h-[350px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#344238] bg-[#132319] px-6 text-center">
+          <div className="flex min-h-87.5 flex-col items-center justify-center rounded-2xl border border-dashed border-[#344238] bg-[#132319] px-6 text-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#C86B38]/10 text-3xl">
               🍲
             </div>
@@ -179,15 +186,25 @@ const MyRecipeContainer = () => {
                   <span className="absolute left-4 top-4 rounded-full border border-[#C86B38]/30 bg-[#102016]/80 px-3 py-1 text-[11px] font-medium text-[#E8A06F] backdrop-blur">
                     ✨ AI Generated
                   </span>
-
-                  {/* Bookmark */}
-                  <button
-                    type="button"
-                    className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#102016]/80 text-[#C5C9BE] backdrop-blur transition hover:border-[#C86B38] hover:text-[#E8A06F]"
-                    aria-label={`Save ${recipe.title}`}
-                  >
-                    ♡
-                  </button>
+                  <div className="flex gap-2">
+                    {/* Bookmark */}
+                    <button
+                      type="button"
+                      className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#102016]/80 text-[#C5C9BE] backdrop-blur transition hover:border-[#C86B38] hover:text-[#E8A06F]"
+                      aria-label={`Save ${recipe.title}`}
+                    >
+                      ♡
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteRecipe(recipe.id)}
+                      disabled={deleteRecipehook.isPending}
+                      className="absolute right-12 top-4 flex h-9 w-16 px-3.5 items-center justify-center border border-white/10 bg-[#102016]/80 text-[#C5C9BE] backdrop-blur transition hover:border-[#db1c1c] hover:text-[#db1c1c]"
+                      aria-label={`Save ${recipe.title}`}
+                    >
+                      {deleteRecipehook.isPending ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Card Content */}

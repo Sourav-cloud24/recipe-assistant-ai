@@ -36,7 +36,7 @@ const {
     onSuccess: (response) => {
       toast.success(response.message);
       reset();
-      router.push("/login");
+      router.push("/");
     },
 
     onError: (error: any) => {
@@ -123,7 +123,7 @@ const {
         <p className="mt-6 text-center text-sm text-gray-600">
           Already have an account?{" "}
           <Link
-            href="/login"
+            href="/"
             className="font-semibold text-green-600 hover:underline"
           >
             Sign In

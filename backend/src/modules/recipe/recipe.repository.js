@@ -26,9 +26,10 @@ export const createRecipe = async ({
         cuisine,
         diet,
         cooking_time,
-        servings
+        servings,
+        source
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'AI')
       RETURNING *;
     `;
 
@@ -234,3 +235,16 @@ export const getRecipeById = async ({ id, user_id }) => {
     client.release();
   }
 };
+
+export const deleteRecipe = async ({id, user_id}) => {
+  const query = `
+    DELETE FROM recipes
+    WHERE id = $1
+      AND user_id = $2
+    RETURNING id
+  `;
+
+  const {rows} = await pool.query(query, [id, user_id])
+
+  return rows[0] || null
+}

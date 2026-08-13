@@ -49,10 +49,10 @@
 }
 
 :root {
-  --background: #102016;
+  --background: #07110B;
   --foreground: #F3EEDF;
   --text: #F3EEDF;
-  --header: #1B281F;
+  --header: #07110B;
   --card: #223027;
   --card-foreground: #F3EEDF;
   --popover: #223027;
@@ -96,10 +96,10 @@
 }
 
 .dark {
-  --background: #102016;
+  --background: #07110B;
   --foreground: #F3EEDF;
   --text: #F3EEDF;
-  --header: #1B281F;
+  --header: #07110B;
   --card: #223027;
   --card-foreground: #F3EEDF;
   --popover: #223027;

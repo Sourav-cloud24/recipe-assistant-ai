@@ -1,3 +1,9 @@
+import MealPlanContainer from "@/features/meal-plan/components/MealPlanContainer";
+
 export default function Page() {
-  return <h1>Meal plan</h1>;
+  return (
+    <div>
+      <MealPlanContainer/>
+    </div>
+  );
 }

@@ -48,3 +48,11 @@ export interface GetRecipeDetailsResponse {
   message: string;
   data: RecipeDetails;
 }
+
+export interface DeleteRecipeResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: number;
+  };
+}
