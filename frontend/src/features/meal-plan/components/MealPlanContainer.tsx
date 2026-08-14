@@ -19,6 +19,8 @@ import {
   Leaf,
   Bell,
 } from "lucide-react";
+import { DialogDemo } from "./MealPlanDialog";
+import { useRecipes } from "@/features/my-recipes/hooks/useRecipes";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -45,6 +47,32 @@ interface MealPlan {
 /* -------------------------------------------------------------------------- */
 /* Dummy Data                                                                 */
 /* -------------------------------------------------------------------------- */
+
+const formatDisplayDate = (value: string) => {
+  if (!value) return "";
+
+  const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${day}-${month}-${year}`;
+  }
+
+  return value;
+};
+
+const formatInputDate = (value: string) => {
+  if (!value) return "";
+
+  const displayMatch = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+
+  if (displayMatch) {
+    const [, day, month, year] = displayMatch;
+    return `${year}-${month}-${day}`;
+  }
+
+  return value;
+};
 
 const dummyMealPlans: MealPlan[] = [
   {
@@ -510,6 +538,18 @@ const MealPlanContainer = () => {
   const [selectedMeal, setSelectedMeal] = useState<MealPlan | null>(
     dummyMealPlans.find((meal) => meal.id === 6) ?? null,
   );
+  const [openAddMealDialog, setAddMealOpenDialog] = useState(false)
+  const [selectedMealDate, setSelectedMealDate] = useState("");
+  const [selectedMealType, setSelectedMealType] = useState("");
+
+    const {
+      data: recipeResponse,
+      isLoading,
+      isError,
+      error,
+    } = useRecipes();
+  
+    const recipes = recipeResponse?.data ?? [];
 
   const mealsForSelectedDay = useMemo(() => {
     return dummyMealPlans.filter((meal) => meal.date === selectedDate);
@@ -539,6 +579,15 @@ const MealPlanContainer = () => {
     if (currentIndex < weekDays.length - 1) {
       setSelectedDate(weekDays[currentIndex + 1].date);
     }
+  };
+
+  const toggleAddMeal = (date: string, type: string) => {
+    console.log("MEAL -->", date, type);
+
+    setSelectedMealDate(formatDisplayDate(date));
+    setSelectedMealType(type);
+
+    setAddMealOpenDialog(true);
   };
 
   return (
@@ -774,6 +823,7 @@ const MealPlanContainer = () => {
                           <button
                             type="button"
                             className="flex h-full min-h-[125px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#344238] text-[#69746C] transition hover:border-[#C86B38] hover:bg-[#C86B38]/5 hover:text-[#E8A06F]"
+                            onClick={() => toggleAddMeal(day.date, row.type)}
                           >
                             <Plus className="h-5 w-5" />
 
@@ -1066,6 +1116,13 @@ const MealPlanContainer = () => {
           </div>
         </div>
       </main>
+      <DialogDemo
+        open={openAddMealDialog}
+        onOpenChange={setAddMealOpenDialog}
+        selectedMealDate={selectedMealDate}
+        selectedMealType={selectedMealType}
+        recipes={recipes}
+      />
     </div>
   );
 };
