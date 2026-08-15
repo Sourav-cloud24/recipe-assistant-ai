@@ -17,9 +17,12 @@ export const mealPlanApi = {
     return response.data;
   },
 
-  getMealPlans: async (): Promise<GetMealPlansResponse> => {
+  getMealPlans: async (date?: string): Promise<GetMealPlansResponse> => {
     const response = await apiClient.get<GetMealPlansResponse>(
-      "/meal-plan"
+      "/meal-plan",
+      {
+        params: date ? { date } : undefined, 
+      }
     );
 
     return response.data;

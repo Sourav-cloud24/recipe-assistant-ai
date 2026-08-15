@@ -19,6 +19,7 @@ import {
 } from "../schema/meal-plan-dialog-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
+import { useCreateMealPlan } from "../hooks/useCreateMealPlan";
 
 interface Recipe {
   id: number;
@@ -42,9 +43,6 @@ export function DialogDemo({
   recipes,
 }: DialogDemoProps) {
 
-  const formattedDate = selectedMealDate?selectedMealDate.split("-").reverse().join("-"):""
-  const formattedMealType = selectedMealType?selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1):""
-
   const {
     register,
     handleSubmit,
@@ -52,14 +50,9 @@ export function DialogDemo({
     formState: { errors },
   } = useForm<AddMealPlanForm>({
     resolver: zodResolver(addMealPlanSchema),
-    // defaultValues: {
-    //     date: "",
-    //     meal_type: "",
-    //     recipe_id: 0,
-    //     servings: 2,
-    //     notes: "",
-    //   },
   });
+
+  const createMealPlan = useCreateMealPlan()
 
   console.log("selectedMealDate-->", selectedMealDate)
   console.log("selectedMealType-->", selectedMealType)
@@ -72,14 +65,14 @@ export function DialogDemo({
     : "";
 
   const formattedMealType = selectedMealType
-    ? selectedMealType.toLowerCase()
+    ? selectedMealType.toUpperCase()
     : "";
 
   reset({
-    date: formattedDate,
+    meal_date: formattedDate,
     meal_type: formattedMealType as AddMealPlanForm["meal_type"],
     recipe_id: 0,
-    servings: 2,
+    // servings: 2,
     notes: "",
   });
 }, [open, selectedMealDate, selectedMealType, reset]);
@@ -87,8 +80,10 @@ export function DialogDemo({
   const handleFormSubmit = (data: AddMealPlanForm) => {
     const formattedData = {
       ...data,
-      date: (data.date),
+      meal_type: data.meal_type.toUpperCase()
+      // date: (data.date),
     };
+    createMealPlan.mutate(formattedData)
 
     console.log("MEAL PLAN DATA -->", formattedData);
 
@@ -131,18 +126,18 @@ export function DialogDemo({
                 <Input
                   id="date"
                   type="date"
-                  {...register("date")}
+                  {...register("meal_date")}
                   className="
                     border-[#344238]
                     bg-[#18251C]
                     text-[#F4F1E8]
-                    [color-scheme:dark]
+                    scheme-dark
                     focus:border-[#C86B38]
                   "
                 />
 
-                {errors.date && (
-                  <p className="text-xs text-red-400">{errors.date.message}</p>
+                {errors.meal_date && (
+                  <p className="text-xs text-red-400">{errors.meal_date.message}</p>
                 )}
               </div>
 
@@ -174,13 +169,13 @@ export function DialogDemo({
                     Select meal
                   </option>
 
-                  <option value="breakfast">☀️ Breakfast</option>
+                  <option value="BREAKFAST">☀️ Breakfast</option>
 
-                  <option value="lunch">☀️ Lunch</option>
+                  <option value="LUNCH">☀️ Lunch</option>
 
-                  <option value="dinner">🌙 Dinner</option>
+                  <option value="DINNER">🌙 Dinner</option>
 
-                  <option value="snack">☕ Snack</option>
+                  <option value="SNACK">☕ Snack</option>
                 </select>
               </div>
             </div>
@@ -226,7 +221,7 @@ export function DialogDemo({
             </div>
 
             {/* Servings */}
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="servings" className="text-sm text-[#C5C9BE]">
                 Servings
               </Label>
@@ -244,7 +239,7 @@ export function DialogDemo({
                   focus:ring-[#C86B38]
                 "
               />
-            </div>
+            </div> */}
 
             {/* Notes */}
             <div className="space-y-2">

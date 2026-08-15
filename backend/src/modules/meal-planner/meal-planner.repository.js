@@ -9,11 +9,11 @@ export const createMealPlan = async ({
 }) => {
   const query = `
         INSERT INTO meal_plans (
-            user_id,
-            recipe_id,
-            meal_date,
-            meal_type,
-            notes      
+          user_id,
+          recipe_id,
+          meal_date,
+          meal_type,
+          notes      
         )
         VALUES ($1, $2, $3, $4, $5)
         RETURNING *
@@ -22,11 +22,15 @@ export const createMealPlan = async ({
   const values = [user_id, recipe_id, meal_date, meal_type, notes ?? null];
 
   const { rows } = await pool.query(query, values);
+  // console.log("rows-->", rows[0])
 
   return rows[0];
 };
 
-export const getMealPlansByUser = async (user_id) => {
+export const getMealPlansByUser = async (user_id, start_date, end_date) => {
+  //   console.log("REPOSITORY user_id:", user_id);
+  // console.log("REPOSITORY start_date:", start_date);
+  // console.log("REPOSITORY end_date:", end_date);
   const query = `
     SELECT
       mp.id,
@@ -48,17 +52,20 @@ export const getMealPlansByUser = async (user_id) => {
       ON mp.recipe_id = r.id
 
     WHERE mp.user_id = $1
+    AND mp.meal_date BETWEEN $2 AND $3
 
     ORDER BY mp.meal_date ASC,
-             CASE mp.meal_type
-               WHEN 'BREAKFAST' THEN 1
-               WHEN 'LUNCH' THEN 2
-               WHEN 'SNACK' THEN 3
-               WHEN 'DINNER' THEN 4
-             END;
+      CASE mp.meal_type
+        WHEN 'BREAKFAST' THEN 1
+        WHEN 'LUNCH' THEN 2
+        WHEN 'SNACK' THEN 3
+        WHEN 'DINNER' THEN 4
+      END;
   `;
 
-  const { rows } = await pool.query(query, [user_id]);
-
+  const values = [user_id, start_date, end_date];
+  // console.log("QUERY VALUES:", values);
+  const { rows } = await pool.query(query, values);
+// console.log("REPOSITORY ROWS:", rows);
   return rows;
 };

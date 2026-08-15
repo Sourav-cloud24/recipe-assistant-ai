@@ -1,599 +1,527 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Clock3,
-  Plus,
-  Users,
-  X,
-  Pencil,
-  Eye,
-  Sun,
-  Moon,
   Coffee,
+  Hash,
+  Leaf,
+  Moon,
+  Plus,
   Sparkles,
   ShoppingBasket,
-  Leaf,
-  Bell,
+  Sun,
+  Users,
+  X,
 } from "lucide-react";
+
 import { DialogDemo } from "./MealPlanDialog";
 import { useRecipes } from "@/features/my-recipes/hooks/useRecipes";
+import { useGetMealPlans } from "../hooks/useGetMealPlans";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
 /* -------------------------------------------------------------------------- */
 
-type MealType = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
+export type MealType = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
 
-interface MealPlan {
-  id: number;
-  date: string;
-  mealType: MealType;
-  title: string;
-  recipeId: number;
-  cookingTime: number;
-  servings: number;
-  image: string;
-  calories: number;
-  protein: string;
-  carbs: string;
-  fat: string;
+export interface CreateMealPlan {
+  meal_date: string;
+  meal_type: MealType;
+  recipe_id: number;
   notes?: string;
 }
 
+export interface MealPlan {
+  id: number;
+  user_id: number;
+  recipe_id: number;
+  meal_date: string;
+  meal_type: MealType;
+  servings: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateMealPlanResponse {
+  success: boolean;
+  message: string;
+  data: MealPlan;
+}
+
+export interface GetMealPlansResponse {
+  success: boolean;
+  message: string;
+  data: {
+    start_date: string;
+    end_date: string;
+    meal_plans: MealPlan[];
+  };
+}
+
+interface WeekDay {
+  date: string;
+  day: string;
+  shortDate: string;
+  isToday: boolean;
+}
+
 /* -------------------------------------------------------------------------- */
-/* Dummy Data                                                                 */
+/* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
+
+const parseApiDate = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+};
+
+const formatDateToApi = (date: Date) => {
+  const year = date.getFullYear();
+
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 
 const formatDisplayDate = (value: string) => {
   if (!value) return "";
 
-  const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = parseApiDate(value);
 
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-    return `${day}-${month}-${year}`;
-  }
-
-  return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
 };
 
-const formatInputDate = (value: string) => {
+const formatShortDate = (value: string) => {
   if (!value) return "";
 
-  const displayMatch = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  const date = parseApiDate(value);
 
-  if (displayMatch) {
-    const [, day, month, year] = displayMatch;
-    return `${year}-${month}-${day}`;
-  }
-
-  return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+  }).format(date);
 };
 
-const dummyMealPlans: MealPlan[] = [
-  {
-    id: 1,
-    date: "2025-08-12",
-    mealType: "BREAKFAST",
-    title: "Oats Berry Bowl",
-    recipeId: 101,
-    cookingTime: 10,
-    servings: 1,
-    image:
-      "https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=500",
-    calories: 320,
-    protein: "12g",
-    carbs: "48g",
-    fat: "8g",
-    notes: "Add some fresh berries before serving.",
-  },
-  {
-    id: 2,
-    date: "2025-08-12",
-    mealType: "LUNCH",
-    title: "Quinoa Bowl",
-    recipeId: 102,
-    cookingTime: 25,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500",
-    calories: 420,
-    protein: "18g",
-    carbs: "52g",
-    fat: "12g",
-  },
-  {
-    id: 3,
-    date: "2025-08-12",
-    mealType: "DINNER",
-    title: "Lauki Curry",
-    recipeId: 103,
-    cookingTime: 30,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500",
-    calories: 380,
-    protein: "14g",
-    carbs: "42g",
-    fat: "14g",
-  },
-  {
-    id: 4,
-    date: "2025-08-12",
-    mealType: "SNACK",
-    title: "Roasted Makhana",
-    recipeId: 104,
-    cookingTime: 15,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1599599810694-b5ac3f7b6b8c?w=500",
-    calories: 220,
-    protein: "8g",
-    carbs: "26g",
-    fat: "9g",
-  },
+const formatLongDate = (value: string) => {
+  if (!value) return "";
 
-  {
-    id: 5,
-    date: "2025-08-13",
-    mealType: "BREAKFAST",
-    title: "Veg Omelette",
-    recipeId: 105,
-    cookingTime: 15,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1510693206972-df098062cb71?w=500",
-    calories: 280,
-    protein: "20g",
-    carbs: "8g",
-    fat: "18g",
-  },
-  {
-    id: 6,
-    date: "2025-08-13",
-    mealType: "LUNCH",
-    title: "Paneer Bhurji",
-    recipeId: 106,
-    cookingTime: 20,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=500",
-    calories: 320,
-    protein: "18g",
-    carbs: "22g",
-    fat: "14g",
-    notes: "Light and high protein lunch. Perfect with roti or rice.",
-  },
-  {
-    id: 7,
-    date: "2025-08-13",
-    mealType: "DINNER",
-    title: "Jeera Rice & Dal",
-    recipeId: 107,
-    cookingTime: 35,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500",
-    calories: 460,
-    protein: "17g",
-    carbs: "64g",
-    fat: "13g",
-  },
-  {
-    id: 8,
-    date: "2025-08-13",
-    mealType: "SNACK",
-    title: "Greek Yogurt",
-    recipeId: 108,
-    cookingTime: 5,
-    servings: 1,
-    image:
-      "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500",
-    calories: 180,
-    protein: "15g",
-    carbs: "14g",
-    fat: "6g",
-  },
+  const date = parseApiDate(value);
 
-  {
-    id: 9,
-    date: "2025-08-14",
-    mealType: "BREAKFAST",
-    title: "Chia Pudding Mango",
-    recipeId: 109,
-    cookingTime: 10,
-    servings: 1,
-    image:
-      "https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=500",
-    calories: 260,
-    protein: "9g",
-    carbs: "38g",
-    fat: "9g",
-  },
-  {
-    id: 10,
-    date: "2025-08-14",
-    mealType: "LUNCH",
-    title: "Veg Pasta",
-    recipeId: 110,
-    cookingTime: 30,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=500",
-    calories: 480,
-    protein: "17g",
-    carbs: "62g",
-    fat: "16g",
-  },
-  {
-    id: 11,
-    date: "2025-08-14",
-    mealType: "DINNER",
-    title: "Stuffed Capsicum",
-    recipeId: 111,
-    cookingTime: 40,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1547592180-85f173990554?w=500",
-    calories: 340,
-    protein: "16g",
-    carbs: "30g",
-    fat: "15g",
-  },
-  {
-    id: 12,
-    date: "2025-08-14",
-    mealType: "SNACK",
-    title: "Protein Smoothie",
-    recipeId: 112,
-    cookingTime: 8,
-    servings: 1,
-    image:
-      "https://images.unsplash.com/photo-1553530666-ba11a7da3888?w=500",
-    calories: 290,
-    protein: "24g",
-    carbs: "28g",
-    fat: "8g",
-  },
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+};
 
-  {
-    id: 13,
-    date: "2025-08-15",
-    mealType: "BREAKFAST",
-    title: "Poha",
-    recipeId: 113,
-    cookingTime: 20,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?w=500",
-    calories: 310,
-    protein: "9g",
-    carbs: "46g",
-    fat: "9g",
-  },
-  {
-    id: 14,
-    date: "2025-08-15",
-    mealType: "LUNCH",
-    title: "Chana Masala",
-    recipeId: 114,
-    cookingTime: 35,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500",
-    calories: 390,
-    protein: "18g",
-    carbs: "48g",
-    fat: "12g",
-  },
-  {
-    id: 15,
-    date: "2025-08-15",
-    mealType: "DINNER",
-    title: "Palak Paneer",
-    recipeId: 115,
-    cookingTime: 35,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=500",
-    calories: 420,
-    protein: "22g",
-    carbs: "18g",
-    fat: "22g",
-  },
-  {
-    id: 16,
-    date: "2025-08-15",
-    mealType: "SNACK",
-    title: "Nuts & Seeds",
-    recipeId: 116,
-    cookingTime: 5,
-    servings: 1,
-    image:
-      "https://images.unsplash.com/photo-1599599810694-b5ac3f7b6b8c?w=500",
-    calories: 240,
-    protein: "8g",
-    carbs: "12g",
-    fat: "18g",
-  },
+const formatDateTime = (value: string) => {
+  if (!value) return "-";
 
-  {
-    id: 17,
-    date: "2025-08-16",
-    mealType: "BREAKFAST",
-    title: "Smoothie Bowl",
-    recipeId: 117,
-    cookingTime: 10,
-    servings: 1,
-    image:
-      "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?w=500",
-    calories: 300,
-    protein: "11g",
-    carbs: "44g",
-    fat: "9g",
-  },
-  {
-    id: 18,
-    date: "2025-08-16",
-    mealType: "LUNCH",
-    title: "Dal Tadka & Rice",
-    recipeId: 118,
-    cookingTime: 35,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500",
-    calories: 470,
-    protein: "19g",
-    carbs: "68g",
-    fat: "13g",
-  },
-  {
-    id: 19,
-    date: "2025-08-16",
-    mealType: "DINNER",
-    title: "Veg Khichdi",
-    recipeId: 119,
-    cookingTime: 30,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500",
-    calories: 360,
-    protein: "15g",
-    carbs: "54g",
-    fat: "9g",
-  },
-  {
-    id: 20,
-    date: "2025-08-16",
-    mealType: "SNACK",
-    title: "Buttermilk",
-    recipeId: 120,
-    cookingTime: 5,
-    servings: 1,
-    image:
-      "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=500",
-    calories: 120,
-    protein: "7g",
-    carbs: "10g",
-    fat: "4g",
-  },
+  const date = new Date(value);
 
-  {
-    id: 21,
-    date: "2025-08-17",
-    mealType: "BREAKFAST",
-    title: "Masala Upma",
-    recipeId: 121,
-    cookingTime: 20,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?w=500",
-    calories: 320,
-    protein: "9g",
-    carbs: "48g",
-    fat: "10g",
-  },
-  {
-    id: 22,
-    date: "2025-08-17",
-    mealType: "LUNCH",
-    title: "Veg Biryani",
-    recipeId: 122,
-    cookingTime: 45,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1563379091339-03246963d96c?w=500",
-    calories: 520,
-    protein: "16g",
-    carbs: "72g",
-    fat: "17g",
-  },
-  {
-    id: 23,
-    date: "2025-08-17",
-    mealType: "DINNER",
-    title: "Mix Veg Curry",
-    recipeId: 123,
-    cookingTime: 30,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500",
-    calories: 350,
-    protein: "12g",
-    carbs: "38g",
-    fat: "14g",
-  },
-  {
-    id: 24,
-    date: "2025-08-17",
-    mealType: "SNACK",
-    title: "Fruit Chaat",
-    recipeId: 124,
-    cookingTime: 10,
-    servings: 2,
-    image:
-      "https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=500",
-    calories: 180,
-    protein: "3g",
-    carbs: "38g",
-    fat: "2g",
-  },
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
 
-  {
-    id: 25,
-    date: "2025-08-18",
-    mealType: "BREAKFAST",
-    title: "Fruit Salad",
-    recipeId: 125,
-    cookingTime: 10,
-    servings: 1,
-    image:
-      "https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=500",
-    calories: 210,
-    protein: "4g",
-    carbs: "42g",
-    fat: "3g",
-  },
-];
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const formatMealType = (value: MealType) => {
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+};
+
+/*
+ Dialog currently receives dates in DD-MM-YYYY format
+ from your existing implementation.
+*/
+const formatDialogDate = (value: string) => {
+  if (!value) return "";
+
+  const [year, month, day] = value.split("-");
+
+  return `${day}-${month}-${year}`;
+};
+
+const generateWeekDays = (startDate: string, endDate: string): WeekDay[] => {
+  if (!startDate || !endDate) {
+    return [];
+  }
+
+  const start = parseApiDate(startDate);
+  const end = parseApiDate(endDate);
+
+  const today = formatDateToApi(new Date());
+
+  const days: WeekDay[] = [];
+
+  const current = new Date(start);
+
+  while (current <= end) {
+    const date = formatDateToApi(current);
+
+    days.push({
+      date,
+
+      day: new Intl.DateTimeFormat("en-GB", {
+        weekday: "short",
+      }).format(current),
+
+      shortDate: new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+      }).format(current),
+
+      isToday: date === today,
+    });
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return days;
+};
 
 /* -------------------------------------------------------------------------- */
-/* Week Data                                                                  */
+/* Meal Rows                                                                  */
 /* -------------------------------------------------------------------------- */
-
-const weekDays = [
-  {
-    date: "2025-08-12",
-    day: "Mon",
-    shortDate: "12 Aug",
-  },
-  {
-    date: "2025-08-13",
-    day: "Tue",
-    shortDate: "13 Aug",
-  },
-  {
-    date: "2025-08-14",
-    day: "Wed",
-    shortDate: "14 Aug",
-  },
-  {
-    date: "2025-08-15",
-    day: "Thu",
-    shortDate: "15 Aug",
-  },
-  {
-    date: "2025-08-16",
-    day: "Fri",
-    shortDate: "16 Aug",
-  },
-  {
-    date: "2025-08-17",
-    day: "Sat",
-    shortDate: "17 Aug",
-  },
-  {
-    date: "2025-08-18",
-    day: "Sun",
-    shortDate: "18 Aug",
-  },
-];
 
 const mealRows: {
   type: MealType;
   label: string;
+  addLabel: string;
   icon: typeof Sun;
 }[] = [
   {
     type: "BREAKFAST",
     label: "Breakfast",
+    addLabel: "Add Breakfast",
     icon: Sun,
   },
   {
     type: "LUNCH",
     label: "Lunch",
+    addLabel: "Add Lunch",
     icon: Sun,
   },
   {
     type: "DINNER",
     label: "Dinner",
+    addLabel: "Add Dinner",
     icon: Moon,
   },
   {
     type: "SNACK",
     label: "Snacks",
+    addLabel: "Add Snack",
     icon: Coffee,
   },
 ];
 
 /* -------------------------------------------------------------------------- */
-/* Component                                                                  */
+/* Main Component                                                             */
 /* -------------------------------------------------------------------------- */
 
 const MealPlanContainer = () => {
-  const [selectedDate, setSelectedDate] = useState("2025-08-13");
-  const [selectedMeal, setSelectedMeal] = useState<MealPlan | null>(
-    dummyMealPlans.find((meal) => meal.id === 6) ?? null,
-  );
-  const [openAddMealDialog, setAddMealOpenDialog] = useState(false)
+  const [selectedDate, setSelectedDate] = useState("");
+
+  const [selectedMeal, setSelectedMeal] = useState<MealPlan | null>(null);
+
+  const [openAddMealDialog, setAddMealOpenDialog] = useState(false);
+
   const [selectedMealDate, setSelectedMealDate] = useState("");
+
   const [selectedMealType, setSelectedMealType] = useState("");
 
-    const {
-      data: recipeResponse,
-      isLoading,
-      isError,
-      error,
-    } = useRecipes();
-  
-    const recipes = recipeResponse?.data ?? [];
+  /* ------------------------------------------------------------------------ */
+  /* Recipe API                                                               */
+  /* ------------------------------------------------------------------------ */
+
+  const { data: recipeResponse, isLoading: isRecipesLoading } = useRecipes();
+
+  const recipes = recipeResponse?.data ?? [];
+
+  /* ------------------------------------------------------------------------ */
+  /* Meal Plan API                                                            */
+  /* ------------------------------------------------------------------------ */
+
+  const {
+    data: mealPlanResponse,
+    isLoading: isMealPlanLoading,
+    isError: isMealPlanError,
+    error: mealPlanError,
+  } = useGetMealPlans();
+
+  /* ------------------------------------------------------------------------ */
+  /* API Data                                                                 */
+  /* ------------------------------------------------------------------------ */
+
+  const startDate = mealPlanResponse?.data?.start_date ?? "";
+
+  const endDate = mealPlanResponse?.data?.end_date ?? "";
+
+  const mealPlans: MealPlan[] = mealPlanResponse?.data?.meal_plans ?? [];
+
+  /* ------------------------------------------------------------------------ */
+  /* Generate Week From API                                                   */
+  /* ------------------------------------------------------------------------ */
+
+  const weekDays = useMemo(
+    () => generateWeekDays(startDate, endDate),
+    [startDate, endDate],
+  );
+
+  /* ------------------------------------------------------------------------ */
+  /* Set Initial Selected Date                                                */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (weekDays.length === 0) {
+      return;
+    }
+
+    const today = formatDateToApi(new Date());
+
+    setSelectedDate((currentSelectedDate) => {
+      /*
+         Keep current selection if it
+         still belongs to this API week.
+        */
+      const currentStillExists = weekDays.some(
+        (day) => day.date === currentSelectedDate,
+      );
+
+      if (currentStillExists) {
+        return currentSelectedDate;
+      }
+
+      /*
+         If today belongs to this week,
+         automatically select today.
+        */
+      const todayExists = weekDays.some((day) => day.date === today);
+
+      if (todayExists) {
+        return today;
+      }
+
+      /*
+         Otherwise select the first
+         API date.
+        */
+      return weekDays[0].date;
+    });
+  }, [weekDays]);
+
+  /* ------------------------------------------------------------------------ */
+  /* Keep Selected Meal Updated                                               */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (!selectedMeal) {
+      return;
+    }
+
+    const updatedMeal = mealPlans.find((meal) => meal.id === selectedMeal.id);
+
+    if (!updatedMeal) {
+      setSelectedMeal(null);
+      return;
+    }
+
+    setSelectedMeal(updatedMeal);
+  }, [mealPlans]);
+
+  /* ------------------------------------------------------------------------ */
+  /* Selected Day Meals                                                       */
+  /* ------------------------------------------------------------------------ */
 
   const mealsForSelectedDay = useMemo(() => {
-    return dummyMealPlans.filter((meal) => meal.date === selectedDate);
-  }, [selectedDate]);
+    return mealPlans.filter((meal) => meal.meal_date === selectedDate);
+  }, [mealPlans, selectedDate]);
+
+  /* ------------------------------------------------------------------------ */
+  /* Meal Count                                                               */
+  /* ------------------------------------------------------------------------ */
+
+  const plannedMealCount = mealPlans.length;
+
+  /* ------------------------------------------------------------------------ */
+  /* Get Meal By Date + Meal Type                                             */
+  /* ------------------------------------------------------------------------ */
 
   const getMeal = (type: MealType, date: string) => {
-    return dummyMealPlans.find(
-      (meal) => meal.date === date && meal.mealType === type,
+    return mealPlans.find(
+      (meal) => meal.meal_date === date && meal.meal_type === type,
     );
   };
 
+  /* ------------------------------------------------------------------------ */
+  /* Get First Available Meal Type                                            */
+  /* ------------------------------------------------------------------------ */
+
+  const getFirstAvailableMealType = (date: string): MealType => {
+    const existingTypes = mealPlans
+      .filter((meal) => meal.meal_date === date)
+      .map((meal) => meal.meal_type);
+
+    const available = mealRows.find((row) => !existingTypes.includes(row.type));
+
+    return available?.type ?? "BREAKFAST";
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* Day Navigation                                                          */
+  /* ------------------------------------------------------------------------ */
+
   const handlePreviousDay = () => {
-    const currentIndex = weekDays.findIndex(
-      (day) => day.date === selectedDate,
-    );
+    if (!selectedDate) {
+      return;
+    }
+
+    const currentIndex = weekDays.findIndex((day) => day.date === selectedDate);
 
     if (currentIndex > 0) {
-      setSelectedDate(weekDays[currentIndex - 1].date);
+      const previousDate = weekDays[currentIndex - 1].date;
+
+      setSelectedDate(previousDate);
+
+      setSelectedMeal(null);
     }
   };
 
   const handleNextDay = () => {
-    const currentIndex = weekDays.findIndex(
-      (day) => day.date === selectedDate,
-    );
+    if (!selectedDate) {
+      return;
+    }
 
-    if (currentIndex < weekDays.length - 1) {
-      setSelectedDate(weekDays[currentIndex + 1].date);
+    const currentIndex = weekDays.findIndex((day) => day.date === selectedDate);
+
+    if (currentIndex >= 0 && currentIndex < weekDays.length - 1) {
+      const nextDate = weekDays[currentIndex + 1].date;
+
+      setSelectedDate(nextDate);
+
+      setSelectedMeal(null);
     }
   };
 
-  const toggleAddMeal = (date: string, type: string) => {
-    console.log("MEAL -->", date, type);
+  /* ------------------------------------------------------------------------ */
+  /* Today                                                                    */
+  /* ------------------------------------------------------------------------ */
 
-    setSelectedMealDate(formatDisplayDate(date));
+  const handleToday = () => {
+    const today = formatDateToApi(new Date());
+
+    const todayExists = weekDays.some((day) => day.date === today);
+
+    if (todayExists) {
+      setSelectedDate(today);
+      setSelectedMeal(null);
+
+      return;
+    }
+
+    if (weekDays.length > 0) {
+      setSelectedDate(weekDays[0].date);
+
+      setSelectedMeal(null);
+    }
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* Open Add Meal Dialog                                                     */
+  /* ------------------------------------------------------------------------ */
+
+  const toggleAddMeal = (date: string, type: MealType) => {
+    setSelectedDate(date);
+
+    setSelectedMealDate(formatDialogDate(date));
+
     setSelectedMealType(type);
 
     setAddMealOpenDialog(true);
   };
 
+  /* ------------------------------------------------------------------------ */
+  /* Main Add Meal Button                                                     */
+  /* ------------------------------------------------------------------------ */
+
+  const handleMainAddMeal = () => {
+    if (!selectedDate) {
+      return;
+    }
+
+    const mealType = getFirstAvailableMealType(selectedDate);
+
+    toggleAddMeal(selectedDate, mealType);
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* Loading                                                                  */
+  /* ------------------------------------------------------------------------ */
+
+  if (isMealPlanLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#07110B] text-[#F3EEDF]">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[#344238] border-t-[#C86B38]" />
+
+          <p className="mt-4 text-sm text-[#8D988E]">
+            Loading your meal plan...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Error                                                                    */
+  /* ------------------------------------------------------------------------ */
+
+  if (isMealPlanError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#07110B] px-4 text-[#F3EEDF]">
+        <div className="w-full max-w-md rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+          <CalendarDays className="mx-auto h-10 w-10 text-red-400" />
+
+          <h2 className="mt-4 text-lg font-semibold">
+            Unable to load meal plan
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-[#8D988E]">
+            {mealPlanError instanceof Error
+              ? mealPlanError.message
+              : "Something went wrong while fetching your weekly meal plan."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Render                                                                   */
+  /* ------------------------------------------------------------------------ */
+
   return (
     <div className="min-h-screen bg-[#07110B] text-[#F3EEDF]">
       {/* ------------------------------------------------------------------ */}
-      {/* Header                                                            */}
+      {/* Header                                                             */}
       {/* ------------------------------------------------------------------ */}
 
       <div className="border-b border-[#26382A] px-2.5 py-6 lg:px-4">
@@ -612,42 +540,46 @@ const MealPlanContainer = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="hidden rounded-xl border border-[#344238] bg-[#101D14] px-5 py-2.5 text-sm font-medium transition hover:border-[#C86B38] lg:block"
-            >
-              My Recipes
-            </button>
-          </div>
+          <button
+            type="button"
+            className="hidden rounded-xl border border-[#344238] bg-[#101D14] px-5 py-2.5 text-sm font-medium transition hover:border-[#C86B38] lg:block"
+          >
+            My Recipes
+          </button>
         </div>
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Main Content                                                      */}
+      {/* Main Content                                                       */}
       {/* ------------------------------------------------------------------ */}
 
       <main className="px-2.5 py-6 lg:px-4">
-        {/* Controls */}
+        {/* ---------------------------------------------------------------- */}
+        {/* Controls                                                         */}
+        {/* ---------------------------------------------------------------- */}
 
         <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center overflow-hidden rounded-xl border border-[#344238] bg-[#101D14]">
-              <button
-                type="button"
-                className="border-r border-[#344238] p-3 text-[#C5C9BE] hover:text-[#C86B38]"
-              >
-                <CalendarDays className="h-4 w-4" />
-              </button>
+            {/* Week Range */}
 
-              <span className="px-4 text-sm">
-                12 Aug – 18 Aug 2025
+            <div className="flex items-center overflow-hidden rounded-xl border border-[#344238] bg-[#101D14]">
+              <div className="border-r border-[#344238] p-3 text-[#C86B38]">
+                <CalendarDays className="h-4 w-4" />
+              </div>
+
+              <span className="px-4 text-sm text-[#DADDD4]">
+                {startDate && endDate
+                  ? `${formatDisplayDate(startDate)} - ${formatDisplayDate(
+                      endDate,
+                    )}`
+                  : "No week available"}
               </span>
 
               <button
                 type="button"
                 onClick={handlePreviousDay}
-                className="border-l border-[#344238] p-3 text-[#A8A99A] hover:text-white"
+                disabled={!selectedDate || weekDays[0]?.date === selectedDate}
+                className="border-l border-[#344238] p-3 text-[#A8A99A] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -655,467 +587,508 @@ const MealPlanContainer = () => {
               <button
                 type="button"
                 onClick={handleNextDay}
-                className="border-l border-[#344238] p-3 text-[#A8A99A] hover:text-white"
+                disabled={
+                  !selectedDate ||
+                  weekDays[weekDays.length - 1]?.date === selectedDate
+                }
+                className="border-l border-[#344238] p-3 text-[#A8A99A] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
 
+            {/* Today */}
+
             <button
               type="button"
-              onClick={() => setSelectedDate("2025-08-13")}
-              className="rounded-xl border border-[#344238] bg-[#101D14] px-5 py-3 text-sm hover:border-[#C86B38]"
+              onClick={handleToday}
+              className="rounded-xl border border-[#344238] bg-[#101D14] px-5 py-3 text-sm transition hover:border-[#C86B38]"
             >
               Today
             </button>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex rounded-xl border border-[#344238] bg-[#101D14] p-1">
-              <button
-                type="button"
-                className="rounded-lg bg-[#2B351D] px-5 py-2 text-sm text-[#E8A06F]"
-              >
-                Week
-              </button>
+            {/* Planned Count */}
 
-              <button
-                type="button"
-                className="rounded-lg px-5 py-2 text-sm text-[#7E887F]"
-              >
-                Month
-              </button>
+            <div className="rounded-xl border border-[#344238] bg-[#101D14] px-4 py-3 text-sm text-[#8D988E]">
+              <span className="font-semibold text-[#E8A06F]">
+                {plannedMealCount}
+              </span>{" "}
+              {plannedMealCount === 1 ? "meal" : "meals"} planned
             </div>
-
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-xl bg-[#C86B38] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#D9824A]"
-            >
-              <Plus className="h-4 w-4" />
-              Add Meal
-            </button>
           </div>
+
+          {/* Add Meal */}
+
+          <button
+            type="button"
+            onClick={handleMainAddMeal}
+            disabled={!selectedDate || isRecipesLoading}
+            className="flex items-center gap-2 rounded-xl bg-[#C86B38] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#D9824A] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" />
+            Add Meal
+          </button>
         </div>
 
         {/* ---------------------------------------------------------------- */}
-        {/* Planner + Details                                                */}
+        {/* Empty API State                                                   */}
+        {/* ---------------------------------------------------------------- */}
+
+        {mealPlans.length === 0 && (
+          <div className="mb-5 flex items-center gap-4 rounded-2xl border border-[#344238] bg-[#101D14] px-5 py-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#C86B38]/10">
+              <CalendarDays className="h-5 w-5 text-[#C86B38]" />
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-[#F3EEDF]">
+                Your meal plan is empty
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-[#7E887F]">
+                No meals have been planned from{" "}
+                <span className="text-[#B7BCA8]">
+                  {formatDisplayDate(startDate)}
+                </span>{" "}
+                to{" "}
+                <span className="text-[#B7BCA8]">
+                  {formatDisplayDate(endDate)}
+                </span>
+                . Select an empty slot below to add your first meal.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Planner + Details                                                 */}
         {/* ---------------------------------------------------------------- */}
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
-          {/* Planner */}
+          {/* -------------------------------------------------------------- */}
+          {/* Planner                                                        */}
+          {/* -------------------------------------------------------------- */}
 
-          <div className="overflow-hidden rounded-2xl border border-[#26382A] bg-[#0E1B12]">
-            {/* Days Header */}
+          <div className="overflow-x-auto rounded-2xl border border-[#26382A] bg-[#0E1B12]">
+            <div className="min-w-[900px]">
+              {/* ---------------------------------------------------------- */}
+              {/* Week Header                                                */}
+              {/* ---------------------------------------------------------- */}
 
-            <div className="grid grid-cols-[95px_repeat(7,minmax(100px,1fr))] border-b border-[#26382A]">
-              <div className="flex items-center px-4 py-4 text-sm font-medium text-[#B7BCA8]">
-                Meal
-              </div>
+              <div
+                className="grid border-b border-[#26382A]"
+                style={{
+                  gridTemplateColumns: `95px repeat(${Math.max(
+                    weekDays.length,
+                    1,
+                  )}, minmax(100px, 1fr))`,
+                }}
+              >
+                <div className="flex items-center px-4 py-4 text-sm font-medium text-[#B7BCA8]">
+                  Meal
+                </div>
 
-              {weekDays.map((day) => {
-                const active = day.date === selectedDate;
+                {weekDays.map((day) => {
+                  const active = day.date === selectedDate;
 
-                return (
-                  <button
-                    type="button"
-                    key={day.date}
-                    onClick={() => setSelectedDate(day.date)}
-                    className={`relative border-l border-[#26382A] px-2 py-4 text-center transition ${
-                      active
-                        ? "bg-[#18251A]"
-                        : "hover:bg-[#142117]"
-                    }`}
-                  >
-                    <p
-                      className={`text-sm font-semibold ${
-                        active ? "text-[#E8A06F]" : "text-[#F3EEDF]"
+                  return (
+                    <button
+                      type="button"
+                      key={day.date}
+                      onClick={() => {
+                        setSelectedDate(day.date);
+
+                        setSelectedMeal(null);
+                      }}
+                      className={`relative border-l border-[#26382A] px-2 py-4 text-center transition ${
+                        active ? "bg-[#18251A]" : "hover:bg-[#142117]"
                       }`}
                     >
-                      {day.day}
-                    </p>
+                      {day.isToday && (
+                        <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#C86B38]" />
+                      )}
 
-                    <p className="mt-1 text-xs text-[#788278]">
-                      {day.shortDate}
-                    </p>
-
-                    {active && (
-                      <span className="absolute bottom-0 left-1/2 h-1 w-12 -translate-x-1/2 rounded-t-full bg-[#C86B38]" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Meal Rows */}
-
-            {mealRows.map((row) => {
-              const RowIcon = row.icon;
-
-              return (
-                <div
-                  key={row.type}
-                  className="grid min-h-[145px] grid-cols-[95px_repeat(7,minmax(100px,1fr))] border-b border-[#26382A] last:border-b-0"
-                >
-                  {/* Meal Type */}
-
-                  <div className="flex flex-col items-center justify-center gap-3 border-r border-[#26382A] px-2">
-                    <RowIcon
-                      className={`h-6 w-6 ${
-                        row.type === "DINNER"
-                          ? "text-[#8F9B67]"
-                          : "text-[#D78B3F]"
-                      }`}
-                    />
-
-                    <span className="text-center text-xs font-medium">
-                      {row.label}
-                    </span>
-                  </div>
-
-                  {/* Days */}
-
-                  {weekDays.map((day) => {
-                    const meal = getMeal(row.type, day.date);
-                    const active = day.date === selectedDate;
-
-                    return (
-                      <div
-                        key={`${day.date}-${row.type}`}
-                        className={`border-l border-[#26382A] p-2 ${
-                          active ? "bg-[#101E14]" : ""
+                      <p
+                        className={`text-sm font-semibold ${
+                          active ? "text-[#E8A06F]" : "text-[#F3EEDF]"
                         }`}
                       >
-                        {meal ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedMeal(meal);
-                              setSelectedDate(day.date);
-                            }}
-                            className={`group relative h-full min-h-[125px] w-full overflow-hidden rounded-xl border text-left transition ${
-                              selectedMeal?.id === meal.id
-                                ? "border-[#C86B38] bg-[#1B281C]"
-                                : "border-[#344238] bg-[#172319] hover:border-[#68774C]"
-                            }`}
-                          >
-                            <img
-                              src={meal.image}
-                              alt={meal.title}
-                              className="h-[68px] w-full object-cover opacity-90 transition group-hover:scale-105"
-                            />
+                        {day.day}
+                      </p>
 
-                            <div className="p-2.5">
-                              <p className="line-clamp-2 text-xs font-medium leading-4 text-[#F3EEDF]">
-                                {meal.title}
-                              </p>
+                      <p className="mt-1 text-xs text-[#788278]">
+                        {day.shortDate}
+                      </p>
 
-                              <div className="mt-2 flex items-center gap-1 text-[10px] text-[#7F8A80]">
-                                <Clock3 className="h-3 w-3" />
-                                {meal.cookingTime} min
+                      {active && (
+                        <span className="absolute bottom-0 left-1/2 h-1 w-12 -translate-x-1/2 rounded-t-full bg-[#C86B38]" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ---------------------------------------------------------- */}
+              {/* Meal Rows                                                  */}
+              {/* ---------------------------------------------------------- */}
+
+              {mealRows.map((row) => {
+                const RowIcon = row.icon;
+
+                return (
+                  <div
+                    key={row.type}
+                    className="grid min-h-[145px] border-b border-[#26382A] last:border-b-0"
+                    style={{
+                      gridTemplateColumns: `95px repeat(${Math.max(
+                        weekDays.length,
+                        1,
+                      )}, minmax(100px, 1fr))`,
+                    }}
+                  >
+                    {/* Meal Label */}
+
+                    <div className="flex flex-col items-center justify-center gap-3 border-r border-[#26382A] px-2">
+                      <RowIcon
+                        className={`h-6 w-6 ${
+                          row.type === "DINNER"
+                            ? "text-[#8F9B67]"
+                            : "text-[#D78B3F]"
+                        }`}
+                      />
+
+                      <span className="text-center text-xs font-medium">
+                        {row.label}
+                      </span>
+                    </div>
+
+                    {/* Days */}
+
+                    {weekDays.map((day) => {
+                      const meal = getMeal(row.type, day.date);
+
+                      const active = day.date === selectedDate;
+
+                      return (
+                        <div
+                          key={`${day.date}-${row.type}`}
+                          className={`border-l border-[#26382A] p-2 ${
+                            active ? "bg-[#101E14]" : ""
+                          }`}
+                        >
+                          {meal ? (
+                            /*
+                                 API Meal
+                                */
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedMeal(meal);
+
+                                setSelectedDate(day.date);
+                              }}
+                              className={`group relative flex h-full min-h-[125px] w-full flex-col justify-between rounded-xl border p-3 text-left transition ${
+                                selectedMeal?.id === meal.id
+                                  ? "border-[#C86B38] bg-[#1B281C]"
+                                  : "border-[#344238] bg-[#172319] hover:border-[#68774C]"
+                              }`}
+                            >
+                              <div>
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#253326] text-[#E8A06F]">
+                                    <Hash className="h-4 w-4" />
+                                  </div>
+
+                                  <span className="text-[10px] text-[#667168]">
+                                    #{meal.id}
+                                  </span>
+                                </div>
+
+                                <p className="line-clamp-2 text-xs font-semibold leading-4 text-[#F3EEDF]">
+                                  Recipe #{meal.recipe_id}
+                                </p>
+
+                                <p className="mt-1 text-[10px] text-[#7F8A80]">
+                                  {formatMealType(meal.meal_type)}
+                                </p>
                               </div>
-                            </div>
 
-                            <span className="absolute right-2 top-[72px] text-[#8A9289]">
-                              •••
-                            </span>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="flex h-full min-h-[125px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#344238] text-[#69746C] transition hover:border-[#C86B38] hover:bg-[#C86B38]/5 hover:text-[#E8A06F]"
-                            onClick={() => toggleAddMeal(day.date, row.type)}
-                          >
-                            <Plus className="h-5 w-5" />
+                              <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#8D988E]">
+                                <Users className="h-3 w-3" />
 
-                            <span className="text-xs">
-                              Add {row.label.slice(0, -1)}
-                            </span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
+                                <span>
+                                  {meal.servings}{" "}
+                                  {meal.servings === 1 ? "serving" : "servings"}
+                                </span>
+                              </div>
+                            </button>
+                          ) : (
+                            /*
+                                 Empty Slot
+                                */
+                            <button
+                              type="button"
+                              onClick={() => toggleAddMeal(day.date, row.type)}
+                              className="flex h-full min-h-[125px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#344238] text-[#69746C] transition hover:border-[#C86B38] hover:bg-[#C86B38]/5 hover:text-[#E8A06F]"
+                            >
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#172319]">
+                                <Plus className="h-4 w-4" />
+                              </div>
 
-            {/* Bottom Message */}
+                              <span className="text-xs">{row.addLabel}</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
 
-            <div className="flex items-center justify-center gap-2 border-t border-[#26382A] px-5 py-4 text-sm text-[#9DA695]">
-              <span>🍃</span>
-              A well planned meal is a step towards a healthier you.
+              {/* Footer */}
+
+              <div className="flex items-center justify-center gap-2 border-t border-[#26382A] px-5 py-4 text-sm text-[#9DA695]">
+                <span>🍃</span>A well planned meal is a step towards a healthier
+                you.
+              </div>
             </div>
           </div>
 
-          {/* ---------------------------------------------------------------- */}
-          {/* Details Panel                                                    */}
-          {/* ---------------------------------------------------------------- */}
+          {/* -------------------------------------------------------------- */}
+          {/* Details Panel                                                  */}
+          {/* -------------------------------------------------------------- */}
 
           <aside className="rounded-2xl border border-[#26382A] bg-[#0E1B12] p-4">
             {selectedMeal ? (
               <>
-                {/* Panel Header */}
+                {/* Header */}
 
                 <div className="mb-4 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={handlePreviousDay}
-                    className="text-[#C86B38]"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-[#758076]">
+                      Meal Details
+                    </p>
 
-                  <p className="text-sm font-medium text-[#D88A3E]">
-                    Tuesday, 13 Aug
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={handleNextDay}
-                    className="text-[#C86B38]"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </div>
-
-                {/* Image */}
-
-                <div className="relative overflow-hidden rounded-xl">
-                  <img
-                    src={selectedMeal.image}
-                    alt={selectedMeal.title}
-                    className="h-48 w-full object-cover"
-                  />
+                    <p className="mt-1 text-sm font-medium text-[#D88A3E]">
+                      {formatLongDate(selectedMeal.meal_date)}
+                    </p>
+                  </div>
 
                   <button
                     type="button"
                     onClick={() => setSelectedMeal(null)}
-                    className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white backdrop-blur"
+                    className="rounded-lg border border-[#344238] bg-[#111D14] p-2 text-[#929B92] transition hover:border-[#C86B38] hover:text-white"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
 
-                {/* Recipe Info */}
+                {/* Recipe */}
 
-                <div className="mt-4">
-                  <h2 className="text-2xl font-semibold">
-                    {selectedMeal.title}
-                  </h2>
+                <div className="rounded-xl border border-[#344238] bg-[#172319] p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs text-[#7E887F]">Recipe</p>
 
-                  <div className="mt-2 flex items-center gap-2 text-sm text-[#A8A99A]">
+                      <h2 className="mt-1 text-xl font-semibold text-[#F3EEDF]">
+                        Recipe #{selectedMeal.recipe_id}
+                      </h2>
+                    </div>
+
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C86B38]/10 text-[#E8A06F]">
+                      <Hash className="h-5 w-5" />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2 text-sm text-[#A8A99A]">
                     <span className="h-2 w-2 rounded-full bg-[#C86B38]" />
 
-                    {selectedMeal.mealType.charAt(0) +
-                      selectedMeal.mealType.slice(1).toLowerCase()}
+                    {formatMealType(selectedMeal.meal_type)}
                   </div>
                 </div>
 
-                {/* Metadata */}
+                {/* Basic Information */}
 
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  <div className="rounded-xl bg-[#172319] p-3">
-                    <div className="flex items-center gap-2 text-[#A8A99A]">
-                      <Clock3 className="h-4 w-4" />
+                  <DetailCard
+                    label="Meal Plan ID"
+                    value={`#${selectedMeal.id}`}
+                  />
 
-                      <span className="text-xs">Cooking</span>
-                    </div>
+                  <DetailCard
+                    label="Recipe ID"
+                    value={`#${selectedMeal.recipe_id}`}
+                  />
 
-                    <p className="mt-1 text-sm font-medium">
-                      {selectedMeal.cookingTime} min
-                    </p>
-                  </div>
+                  <DetailCard
+                    label="Servings"
+                    value={String(selectedMeal.servings)}
+                    icon={Users}
+                  />
 
-                  <div className="rounded-xl bg-[#172319] p-3">
-                    <div className="flex items-center gap-2 text-[#A8A99A]">
-                      <Users className="h-4 w-4" />
-
-                      <span className="text-xs">Servings</span>
-                    </div>
-
-                    <p className="mt-1 text-sm font-medium">
-                      {selectedMeal.servings} servings
-                    </p>
-                  </div>
+                  <DetailCard
+                    label="User ID"
+                    value={`#${selectedMeal.user_id}`}
+                  />
                 </div>
 
-                {/* Actions */}
+                {/* Meal Date */}
 
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    className="flex items-center justify-center gap-2 rounded-xl border border-[#344238] bg-[#111D14] py-3 text-xs font-medium text-[#C5C9BE] transition hover:border-[#C86B38]"
-                  >
-                    <Eye className="h-4 w-4" />
-                    View Recipe
-                  </button>
+                <div className="mt-4 rounded-xl border border-[#344238] bg-[#111D14] p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#253326]">
+                      <CalendarDays className="h-4 w-4 text-[#E8A06F]" />
+                    </div>
 
-                  <button
-                    type="button"
-                    className="flex items-center justify-center gap-2 rounded-xl bg-[#C86B38] py-3 text-xs font-semibold text-white transition hover:bg-[#D9824A]"
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Change Meal
-                  </button>
-                </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-[#758076]">
+                        Meal Date
+                      </p>
 
-                {/* Nutrition */}
-
-                <div className="mt-6">
-                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-[#D88A3E]">
-                    Nutrition Snapshot
-                  </p>
-
-                  <div className="grid grid-cols-4 gap-2">
-                    <NutritionItem
-                      value={selectedMeal.protein}
-                      label="Protein"
-                    />
-
-                    <NutritionItem
-                      value={selectedMeal.carbs}
-                      label="Carbs"
-                    />
-
-                    <NutritionItem
-                      value={selectedMeal.fat}
-                      label="Fats"
-                    />
-
-                    <NutritionItem
-                      value={String(selectedMeal.calories)}
-                      label="Kcal"
-                    />
+                      <p className="mt-1 text-sm font-medium text-[#F3EEDF]">
+                        {formatDisplayDate(selectedMeal.meal_date)}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Notes */}
 
-                <div className="mt-6">
-                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-[#D88A3E]">
+                <div className="mt-5">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[#D88A3E]">
                     Notes
                   </p>
 
-                  <div className="rounded-xl border border-[#4A5238] bg-[#172319] p-4">
-                    <div className="flex gap-3">
-                      <p className="flex-1 text-sm leading-6 text-[#AEB5A8]">
-                        {selectedMeal.notes ??
-                          "No notes have been added for this meal."}
-                      </p>
+                  <div className="min-h-[100px] rounded-xl border border-[#4A5238] bg-[#172319] p-4">
+                    <p className="text-sm leading-6 text-[#AEB5A8]">
+                      {selectedMeal.notes?.trim()
+                        ? selectedMeal.notes
+                        : "No notes have been added for this meal."}
+                    </p>
+                  </div>
+                </div>
 
-                      <button
-                        type="button"
-                        className="text-[#9A9D8A] hover:text-[#E8A06F]"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                    </div>
+                {/* Record Information */}
+
+                <div className="mt-5">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[#758076]">
+                    Record Information
+                  </p>
+
+                  <div className="space-y-3 rounded-xl border border-[#26382A] bg-[#101A12] p-4">
+                    <RecordRow
+                      label="Created"
+                      value={formatDateTime(selectedMeal.created_at)}
+                    />
+
+                    <div className="border-t border-[#26382A]" />
+
+                    <RecordRow
+                      label="Last updated"
+                      value={formatDateTime(selectedMeal.updated_at)}
+                    />
                   </div>
                 </div>
               </>
             ) : (
-              <div className="flex min-h-[500px] flex-col items-center justify-center text-center">
-                <div className="mb-4 rounded-full bg-[#C86B38]/10 p-5">
-                  <CalendarDays className="h-8 w-8 text-[#C86B38]" />
+              <div className="flex min-h-[500px] flex-col items-center justify-center px-4 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#C86B38]/10">
+                  <CalendarDays className="h-7 w-7 text-[#C86B38]" />
                 </div>
 
                 <h3 className="text-lg font-semibold">
-                  Select a meal
+                  {mealPlans.length === 0
+                    ? "No meals planned yet"
+                    : "Select a meal"}
                 </h3>
 
-                <p className="mt-2 max-w-[220px] text-sm leading-6 text-[#778279]">
-                  Select any meal from your weekly planner to see its details.
+                <p className="mt-2 max-w-[230px] text-sm leading-6 text-[#778279]">
+                  {mealPlans.length === 0
+                    ? "Choose an empty slot from the weekly planner to start adding meals."
+                    : "Select a planned meal from the weekly planner to see its details."}
                 </p>
+
+                {selectedDate && (
+                  <>
+                    <div className="mt-4 rounded-lg bg-[#172319] px-3 py-2 text-xs text-[#899187]">
+                      {formatLongDate(selectedDate)}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleMainAddMeal}
+                      disabled={isRecipesLoading}
+                      className="mt-5 flex items-center gap-2 rounded-xl bg-[#C86B38] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#D9824A] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Meal
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </aside>
         </div>
 
         {/* ---------------------------------------------------------------- */}
-        {/* Bottom Feature Cards                                              */}
+        {/* Selected Day Summary                                              */}
+        {/* ---------------------------------------------------------------- */}
+
+        <div className="mt-5 rounded-2xl border border-[#26382A] bg-[#101D14] p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#758076]">
+                Selected Day
+              </p>
+
+              <h3 className="mt-1 font-medium text-[#F3EEDF]">
+                {selectedDate
+                  ? formatLongDate(selectedDate)
+                  : "No date selected"}
+              </h3>
+            </div>
+
+            <div className="rounded-xl bg-[#172319] px-4 py-2 text-sm text-[#A8A99A]">
+              <span className="font-semibold text-[#E8A06F]">
+                {mealsForSelectedDay.length}
+              </span>{" "}
+              {mealsForSelectedDay.length === 1 ? "meal" : "meals"} planned
+            </div>
+          </div>
+        </div>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Feature Cards                                                     */}
         {/* ---------------------------------------------------------------- */}
 
         <div className="mt-5 grid gap-4 md:grid-cols-3">
-          {/* AI Planner */}
+          <FeatureCard
+            icon={Sparkles}
+            title="Auto Plan with AI"
+            description="Let AI suggest meals for your week automatically."
+            button="Generate Plan"
+          />
 
-          <div className="rounded-2xl border border-[#26382A] bg-[#101D14] p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="rounded-xl bg-[#C86B38]/10 p-3">
-                <Sparkles className="h-5 w-5 text-[#D88A3E]" />
-              </div>
+          <FeatureCard
+            icon={Leaf}
+            title="Balance Your Nutrition"
+            description="Review your weekly meal planning progress."
+            button="View Insights"
+          />
 
-              <div>
-                <h3 className="font-medium">Auto Plan with AI</h3>
-
-                <p className="mt-1 text-xs text-[#758076]">
-                  Let AI suggest meals for your week automatically.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="rounded-lg bg-[#293B20] px-5 py-2.5 text-sm text-[#D9DFC8] transition hover:bg-[#354B28]"
-            >
-              Generate Plan
-            </button>
-          </div>
-
-          {/* Nutrition */}
-
-          <div className="rounded-2xl border border-[#26382A] bg-[#101D14] p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="rounded-xl bg-[#769A57]/10 p-3">
-                <Leaf className="h-5 w-5 text-[#769A57]" />
-              </div>
-
-              <div>
-                <h3 className="font-medium">
-                  Balance Your Nutrition
-                </h3>
-
-                <p className="mt-1 text-xs text-[#758076]">
-                  Get a balanced intake of protein, carbs, and fats.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="rounded-lg bg-[#293B20] px-5 py-2.5 text-sm text-[#D9DFC8] transition hover:bg-[#354B28]"
-            >
-              View Insights
-            </button>
-          </div>
-
-          {/* Shopping List */}
-
-          <div className="rounded-2xl border border-[#26382A] bg-[#101D14] p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="rounded-xl bg-[#C86B38]/10 p-3">
-                <ShoppingBasket className="h-5 w-5 text-[#D88A3E]" />
-              </div>
-
-              <div>
-                <h3 className="font-medium">
-                  Shopping List
-                </h3>
-
-                <p className="mt-1 text-xs text-[#758076]">
-                  Generate your weekly shopping list in one click.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="rounded-lg bg-[#293B20] px-5 py-2.5 text-sm text-[#D9DFC8] transition hover:bg-[#354B28]"
-            >
-              Go to List
-            </button>
-          </div>
+          <FeatureCard
+            icon={ShoppingBasket}
+            title="Shopping List"
+            description="Prepare your shopping list from your planned meals."
+            button="Go to List"
+          />
         </div>
       </main>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Add Meal Dialog                                                    */}
+      {/* ------------------------------------------------------------------ */}
+
       <DialogDemo
         open={openAddMealDialog}
         onOpenChange={setAddMealOpenDialog}
@@ -1128,29 +1101,85 @@ const MealPlanContainer = () => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* Nutrition Component                                                        */
+/* Detail Card                                                                */
 /* -------------------------------------------------------------------------- */
 
-interface NutritionItemProps {
-  value: string;
+interface DetailCardProps {
   label: string;
+  value: string;
+  icon?: typeof Users;
 }
 
-const NutritionItem = ({
-  value,
-  label,
-}: NutritionItemProps) => {
+const DetailCard = ({ label, value, icon: Icon }: DetailCardProps) => {
   return (
-    <div className="text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-4 border-[#65783D] bg-[#172319]">
-        <span className="text-[10px] font-semibold">
-          {value}
-        </span>
+    <div className="rounded-xl bg-[#172319] p-3">
+      <div className="flex items-center gap-2 text-[#A8A99A]">
+        {Icon && <Icon className="h-4 w-4" />}
+
+        <span className="text-xs">{label}</span>
       </div>
 
-      <p className="mt-2 text-[10px] text-[#899187]">
-        {label}
-      </p>
+      <p className="mt-1 text-sm font-medium text-[#F3EEDF]">{value}</p>
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* Record Row                                                                 */
+/* -------------------------------------------------------------------------- */
+
+interface RecordRowProps {
+  label: string;
+  value: string;
+}
+
+const RecordRow = ({ label, value }: RecordRowProps) => {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-xs text-[#758076]">{label}</span>
+
+      <span className="text-right text-xs text-[#B7BCA8]">{value}</span>
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* Feature Card                                                               */
+/* -------------------------------------------------------------------------- */
+
+interface FeatureCardProps {
+  icon: typeof Leaf;
+  title: string;
+  description: string;
+  button: string;
+}
+
+const FeatureCard = ({
+  icon: Icon,
+  title,
+  description,
+  button,
+}: FeatureCardProps) => {
+  return (
+    <div className="rounded-2xl border border-[#26382A] bg-[#101D14] p-5">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="rounded-xl bg-[#C86B38]/10 p-3">
+          <Icon className="h-5 w-5 text-[#D88A3E]" />
+        </div>
+
+        <div>
+          <h3 className="font-medium">{title}</h3>
+
+          <p className="mt-1 text-xs leading-5 text-[#758076]">{description}</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className="rounded-lg bg-[#293B20] px-5 py-2.5 text-sm text-[#D9DFC8] transition hover:bg-[#354B28]"
+      >
+        {button}
+      </button>
     </div>
   );
 };
