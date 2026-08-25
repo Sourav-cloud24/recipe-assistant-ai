@@ -7,7 +7,7 @@ export const createPantry = async (req, res) => {
             user_id: req.user.userId,
             ...req.body,
         });
-        console.log("Created pantry item:", pantryItem);
+        // console.log("Created pantry item:", pantryItem);
 
         return successResponse(res, {
             statusCode: 201,
@@ -103,7 +103,7 @@ export const updatePantryItem = async (req, res) => {
 }
 
 export const deletePantryItem = async (req, res) => {
-    console.log("DELETE API HIT");
+    // console.log("DELETE API HIT");
     try {
         const { id } = req.params;
         const deletedPantryItem = await deletePantryItemService({ id, user_id: req.user.userId });

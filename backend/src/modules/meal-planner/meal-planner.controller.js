@@ -31,6 +31,7 @@ export const getMealPlansController = async (req, res) => {
     const user_id = req.user.userId;
 
     const { date } = req.query;
+    console.log("DATE-->", date)
 
     let startDate;
     let endDate;
@@ -64,11 +65,14 @@ export const getMealPlansController = async (req, res) => {
 
       const day = selectedDate.getDay();
 
+      console.log("day-->", day)
+
       const daysFromMonday = day === 0 ? 6 : day - 1;
 
       const monday = new Date(selectedDate);
 
-      monday.setDate(today.getDate() - daysFromMonday);
+      monday.setDate(selectedDate.getDate() - daysFromMonday);
+      console.log("monday-->", monday)
 
       const sunday = new Date(monday);
 

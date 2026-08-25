@@ -47,7 +47,7 @@ export const getPantryItems = async ({user_id, search }) => {
   `;
 
   const { rows } = await pool.query(query, [user_id, search || null]);
-  console.log("Retrieved pantry items:", rows); 
+  // console.log("Retrieved pantry items:", rows); 
 
   return rows;
 };
@@ -104,7 +104,7 @@ export const updatePantryItem = async ({
 };
 
 export const deletePantryItemRepo = async ({ id, user_id }) => {
-  console.log("deletePantryItemRepo");
+  // console.log("deletePantryItemRepo");
   
   const query = `
   DELETE FROM pantry_items

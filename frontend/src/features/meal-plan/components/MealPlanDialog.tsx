@@ -20,6 +20,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useCreateMealPlan } from "../hooks/useCreateMealPlan";
+import type { MealType } from "../types/meal-plan.type";
 
 interface Recipe {
   id: number;
@@ -31,9 +32,21 @@ interface DialogDemoProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedMealDate: string;
-  selectedMealType: string;
+  selectedMealType: MealType | "";
   recipes: Recipe[];
 }
+
+const mealTypeValues = ["BREAKFAST", "LUNCH", "DINNER", "SNACK"] as const;
+
+const normalizeMealType = (value: string): AddMealPlanForm["meal_type"] | "" => {
+  const normalizedValue = value.toUpperCase();
+
+  if (mealTypeValues.includes(normalizedValue as AddMealPlanForm["meal_type"])) {
+    return normalizedValue as AddMealPlanForm["meal_type"];
+  }
+
+  return "";
+};
 
 export function DialogDemo({
   open,
@@ -58,37 +71,37 @@ export function DialogDemo({
   console.log("selectedMealType-->", selectedMealType)
 
   useEffect(() => {
-  if (!open) return;
+    if (!open) return;
 
-  const formattedDate = selectedMealDate
-    ? selectedMealDate.split("-").reverse().join("-")
-    : "";
+    const formattedDate = selectedMealDate
+      ? selectedMealDate.split("-").reverse().join("-")
+      : "";
 
-  const formattedMealType = selectedMealType
-    ? selectedMealType.toUpperCase()
-    : "";
+    const formattedMealType = normalizeMealType(selectedMealType);
 
-  reset({
-    meal_date: formattedDate,
-    meal_type: formattedMealType as AddMealPlanForm["meal_type"],
-    recipe_id: 0,
-    // servings: 2,
-    notes: "",
-  });
-}, [open, selectedMealDate, selectedMealType, reset]);
+    reset({
+      meal_date: formattedDate,
+      meal_type: formattedMealType || "BREAKFAST",
+      recipe_id: 0,
+      notes: "",
+    });
+  }, [open, selectedMealDate, selectedMealType, reset]);
 
   const handleFormSubmit = (data: AddMealPlanForm) => {
-    const formattedData = {
+    const formattedData: AddMealPlanForm = {
       ...data,
-      meal_type: data.meal_type.toUpperCase()
-      // date: (data.date),
+      meal_type: data.meal_type,
+      notes: data.notes ?? "",
     };
-    createMealPlan.mutate(formattedData)
+
+    createMealPlan.mutate({
+      meal_date: formattedData.meal_date,
+      meal_type: formattedData.meal_type,
+      recipe_id: formattedData.recipe_id,
+      notes: formattedData.notes,
+    });
 
     console.log("MEAL PLAN DATA -->", formattedData);
-
-    // Later:
-    // addMealPlan.mutate(mealData)
 
     onOpenChange(false);
   };

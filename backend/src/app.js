@@ -7,6 +7,7 @@ import pantryRoutes from "./modules/pantry/pantry.routes.js"
 import aiRoutes from "./modules/ai/ai.routes.js"
 import recipeRoutes from "./modules/recipe/recipe.routes.js"
 import mealPlanRoutes from "./modules/meal-planner/meal-planner.routes.js"
+import shoppingListRoutes from "./modules/shopping-list/shopping-list.routes.js"
 
 dotenv.config()
 
@@ -20,6 +21,7 @@ app.use("/api/v1/pantry", pantryRoutes)
 app.use("/api/v1/ai", aiRoutes)
 app.use("/api/v1/recipes", recipeRoutes)
 app.use("/api/v1/meal-plan", mealPlanRoutes)
+app.use("/api/v1/shopping-list", shoppingListRoutes)
 
 app.get("/", (req, res) => {
     res.json({

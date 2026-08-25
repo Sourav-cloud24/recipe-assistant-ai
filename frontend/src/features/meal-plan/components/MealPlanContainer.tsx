@@ -239,6 +239,7 @@ const mealRows: {
 
 const MealPlanContainer = () => {
   const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDateByUser, setSelectedDateByUser] = useState("");
 
   const [selectedMeal, setSelectedMeal] = useState<MealPlan | null>(null);
 
@@ -246,7 +247,7 @@ const MealPlanContainer = () => {
 
   const [selectedMealDate, setSelectedMealDate] = useState("");
 
-  const [selectedMealType, setSelectedMealType] = useState("");
+  const [selectedMealType, setSelectedMealType] = useState<MealType | "">("");
 
   /* ------------------------------------------------------------------------ */
   /* Recipe API                                                               */
@@ -265,7 +266,7 @@ const MealPlanContainer = () => {
     isLoading: isMealPlanLoading,
     isError: isMealPlanError,
     error: mealPlanError,
-  } = useGetMealPlans();
+  } = useGetMealPlans(selectedDateByUser);
 
   /* ------------------------------------------------------------------------ */
   /* API Data                                                                 */
@@ -366,8 +367,10 @@ const MealPlanContainer = () => {
   /* ------------------------------------------------------------------------ */
 
   const getMeal = (type: MealType, date: string) => {
+    // console.log("type-->", type, "date-->",)
     return mealPlans.find(
-      (meal) => meal.meal_date === date && meal.meal_type === type,
+      (meal) =>
+        meal.meal_date.split("T")[0] === date && meal.meal_type === type,
     );
   };
 
@@ -458,6 +461,12 @@ const MealPlanContainer = () => {
     setAddMealOpenDialog(true);
   };
 
+  const toggleDateCheck = (date:string) => {
+    setSelectedDateByUser(date)
+  }
+
+  console.log("SelectedDateByUser-->", selectedDateByUser)
+
   /* ------------------------------------------------------------------------ */
   /* Main Add Meal Button                                                     */
   /* ------------------------------------------------------------------------ */
@@ -498,7 +507,9 @@ const MealPlanContainer = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#07110B] px-4 text-[#F3EEDF]">
         <div className="w-full max-w-md rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-          <CalendarDays className="mx-auto h-10 w-10 text-red-400" />
+          <div className="flex items-center gap-3">
+            <CalendarDays className="h-5 w-5 text-red-400" />
+          </div>
 
           <h2 className="mt-4 text-lg font-semibold">
             Unable to load meal plan
@@ -524,7 +535,7 @@ const MealPlanContainer = () => {
       {/* Header                                                             */}
       {/* ------------------------------------------------------------------ */}
 
-      <div className="border-b border-[#26382A] px-2.5 py-6 lg:px-4">
+      <div className="border-b border-[#26382A] px-2.5 py-3 lg:px-4">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <div className="flex items-center gap-3">
@@ -553,7 +564,7 @@ const MealPlanContainer = () => {
       {/* Main Content                                                       */}
       {/* ------------------------------------------------------------------ */}
 
-      <main className="px-2.5 py-6 lg:px-4">
+      <main className="px-2.5 py-4 lg:px-4">
         {/* ---------------------------------------------------------------- */}
         {/* Controls                                                         */}
         {/* ---------------------------------------------------------------- */}
@@ -565,6 +576,14 @@ const MealPlanContainer = () => {
             <div className="flex items-center overflow-hidden rounded-xl border border-[#344238] bg-[#101D14]">
               <div className="border-r border-[#344238] p-3 text-[#C86B38]">
                 <CalendarDays className="h-4 w-4" />
+                <input
+                  type="date"
+                  name="calendar"
+                  id="calendar"
+                  value={selectedDateByUser}
+                  className="rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white outline-none focus:border-red-400"
+                  onChange={(e) => toggleDateCheck(e.target.value)}
+                />
               </div>
 
               <span className="px-4 text-sm text-[#DADDD4]">
@@ -670,7 +689,7 @@ const MealPlanContainer = () => {
           {/* -------------------------------------------------------------- */}
 
           <div className="overflow-x-auto rounded-2xl border border-[#26382A] bg-[#0E1B12]">
-            <div className="min-w-[900px]">
+            <div className="">
               {/* ---------------------------------------------------------- */}
               {/* Week Header                                                */}
               {/* ---------------------------------------------------------- */}
@@ -738,7 +757,7 @@ const MealPlanContainer = () => {
                 return (
                   <div
                     key={row.type}
-                    className="grid min-h-[145px] border-b border-[#26382A] last:border-b-0"
+                    className="grid min-h-36.25 border-b border-[#26382A] last:border-b-0"
                     style={{
                       gridTemplateColumns: `95px repeat(${Math.max(
                         weekDays.length,
@@ -787,7 +806,7 @@ const MealPlanContainer = () => {
 
                                 setSelectedDate(day.date);
                               }}
-                              className={`group relative flex h-full min-h-[125px] w-full flex-col justify-between rounded-xl border p-3 text-left transition ${
+                              className={`group relative flex h-full min-h-31.25 w-full flex-col justify-between rounded-xl border p-3 text-left transition ${
                                 selectedMeal?.id === meal.id
                                   ? "border-[#C86B38] bg-[#1B281C]"
                                   : "border-[#344238] bg-[#172319] hover:border-[#68774C]"
@@ -829,7 +848,7 @@ const MealPlanContainer = () => {
                             <button
                               type="button"
                               onClick={() => toggleAddMeal(day.date, row.type)}
-                              className="flex h-full min-h-[125px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#344238] text-[#69746C] transition hover:border-[#C86B38] hover:bg-[#C86B38]/5 hover:text-[#E8A06F]"
+                              className="flex h-full min-h-31.25 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#344238] text-[#69746C] transition hover:border-[#C86B38] hover:bg-[#C86B38]/5 hover:text-[#E8A06F]"
                             >
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#172319]">
                                 <Plus className="h-4 w-4" />
@@ -959,7 +978,7 @@ const MealPlanContainer = () => {
                     Notes
                   </p>
 
-                  <div className="min-h-[100px] rounded-xl border border-[#4A5238] bg-[#172319] p-4">
+                  <div className="min-h-25 rounded-xl border border-[#4A5238] bg-[#172319] p-4">
                     <p className="text-sm leading-6 text-[#AEB5A8]">
                       {selectedMeal.notes?.trim()
                         ? selectedMeal.notes
@@ -991,7 +1010,7 @@ const MealPlanContainer = () => {
                 </div>
               </>
             ) : (
-              <div className="flex min-h-[500px] flex-col items-center justify-center px-4 text-center">
+              <div className="flex min-h-125 flex-col items-center justify-center px-4 text-center">
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#C86B38]/10">
                   <CalendarDays className="h-7 w-7 text-[#C86B38]" />
                 </div>
@@ -1002,7 +1021,7 @@ const MealPlanContainer = () => {
                     : "Select a meal"}
                 </h3>
 
-                <p className="mt-2 max-w-[230px] text-sm leading-6 text-[#778279]">
+                <p className="mt-2 max-w-57.5 text-sm leading-6 text-[#778279]">
                   {mealPlans.length === 0
                     ? "Choose an empty slot from the weekly planner to start adding meals."
                     : "Select a planned meal from the weekly planner to see its details."}
