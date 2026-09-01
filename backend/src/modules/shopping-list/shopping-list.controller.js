@@ -1,4 +1,4 @@
-import { getShoppingList } from "./shopping-list.service.js";
+import { getShoppingList, updateShoppingListStatusService } from "./shopping-list.service.js";
 import { successResponse, errorResponse } from "../../utils/response.js";
 
 export const getShoppingListController = async (req, res) => {
@@ -61,6 +61,42 @@ export const getShoppingListController = async (req, res) => {
   } catch (error) {
     console.error("GET SHOPPING LIST ERROR:", error);
 
+    return errorResponse(res, {
+      statusCode: 500,
+      message: error.message,
+    });
+  }
+};
+
+export const updateShoppingListStatusController = async (req, res) => {
+  try {
+    const user_id = req.user.userId;
+    const { id } = req.params;
+    const { status } = req.body;
+
+    console.log("PARAM ID:", id);
+    console.log("USER ID:", user_id);
+    console.log("STATUS:", status);
+
+    if (!["PENDING", "PURCHASED"].includes(status)) {
+      return errorResponse(res, {
+        statusCode: 400,
+        message: "Invalid status",
+      });
+    }
+
+    const item = await updateShoppingListStatusService({
+      id,
+      user_id,
+      status,
+    });
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: "Shopping list item status updated successfully",
+      data: item,
+    });
+  } catch (error) {
     return errorResponse(res, {
       statusCode: 500,
       message: error.message,

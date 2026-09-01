@@ -12,7 +12,7 @@ export default function DashboardLayout({
       <AppSidebar />
 
       <SidebarInset className="text-(--text)">
-        <AppNavbar />
+        {/* <AppNavbar /> */}
 
         <main className="flex-1 min-h-screen p-6 text-(--text)">
           {children}

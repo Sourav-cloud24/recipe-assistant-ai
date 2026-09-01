@@ -12,4 +12,18 @@ export const shoppingListAPI = {
 
     return response.data;
   },
+
+  changeShoppingItemStatus: async ({
+    id,
+    status,
+  }: {
+    id: number;
+    status: "PENDING" | "PURCHASED";
+  }) => {
+    const response = await apiClient.patch(`/shopping-list/${id}/status`, {
+      status,
+    });
+
+    return response.data;
+  },
 };

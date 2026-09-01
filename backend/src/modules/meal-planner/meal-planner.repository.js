@@ -34,7 +34,7 @@ export const getMealPlansByUser = async (user_id, start_date, end_date) => {
   const query = `
     SELECT
       mp.id,
-      mp.meal_date,
+      TO_CHAR(mp.meal_date, 'YYYY-MM-DD') AS meal_date,
       mp.meal_type,
       mp.notes,
 

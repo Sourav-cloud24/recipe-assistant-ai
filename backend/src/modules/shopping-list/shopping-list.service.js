@@ -2,6 +2,9 @@ import {
   getMealPlansForShoppingList,
   getRecipeIngredientsForShoppingList,
   getPantryItemsForShoppingList,
+  createShoppingListItem,
+  upsertShoppingListItem,
+  updateShoppingListStatus,
 } from "./shopping-list.repository.js";
 
 export const getShoppingList = async (user_id, start_date, end_date) => {
@@ -18,7 +21,23 @@ export const getShoppingList = async (user_id, start_date, end_date) => {
   }
 
   // 2. Extract recipe IDs
-  const recipeIds = mealPlans.map((mealPlan) => mealPlan.recipe_id);
+  const recipeCounts = {};
+
+  for (const mealPlan of mealPlans) {
+    const recipeId = mealPlan.recipe_id;
+
+    if (recipeCounts[recipeId]) {
+      recipeCounts[recipeId] += 1;
+    } else {
+      recipeCounts[recipeId] = 1;
+    }
+  }
+
+  console.log("RECIPE COUNTS:", recipeCounts);
+
+  const recipeIds = Object.keys(recipeCounts);
+
+  console.log("UNIQUE RECIPE IDS:", recipeIds);
 
   // 3. Get all ingredients required by those recipes
   const recipeIngredients =
@@ -31,14 +50,18 @@ export const getShoppingList = async (user_id, start_date, end_date) => {
   const requiredIngredients = {};
 
   for (const ingredient of recipeIngredients) {
-    const key = `${ingredient.ingredient_name.toLowerCase()}-${ingredient.unit.toLowerCase()}`;
+    const recipeCount = recipeCounts[ingredient.recipe_id] ?? 1;
+
+    const key = ingredient.ingredient_name.trim().toLowerCase();
+
+    const totalQuantity = Number(ingredient.quantity) * recipeCount;
 
     if (requiredIngredients[key]) {
-      requiredIngredients[key].quantity += Number(ingredient.quantity);
+      requiredIngredients[key].quantity += totalQuantity;
     } else {
       requiredIngredients[key] = {
         ingredient_name: ingredient.ingredient_name,
-        quantity: Number(ingredient.quantity),
+        quantity: totalQuantity,
         unit: ingredient.unit,
       };
     }
@@ -77,5 +100,35 @@ export const getShoppingList = async (user_id, start_date, end_date) => {
     }
   }
 
+  for (const item of shoppingList) {
+    const savedItem = await upsertShoppingListItem({
+      user_id,
+      week_start_date: start_date,
+      ingredient_name: item.ingredient_name,
+      required_quantity: item.required_quantity,
+      purchased_quantity: 0,
+      unit: item.unit,
+    });
+
+    // Add database information to the shopping item
+    item.id = savedItem.id;
+    item.status = savedItem.status;
+    console.log("SAVED ITEM:", savedItem);
+  }
+
   return shoppingList;
+};
+
+export const updateShoppingListStatusService = async ({id, user_id, status}) => {
+  const item = await updateShoppingListStatus({
+    id,
+    user_id,
+    status,
+  });
+
+  if (!item) {
+    throw new Error("Shopping list item not found");
+  }
+  console.log("UPDATE SHOPPING LIST STATUS SERVICE:", item)
+  return item;
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
   ChevronLeft,
@@ -16,6 +17,8 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { useGetShoppingList } from "../hooks/useGetShoppingList";
+import type { GetShoppingListResponse } from "../types/shopping-list.types";
+import { useUpdateShoppingListItemStatus } from "../hooks/useUpdateShoppingListItemStatus";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -29,95 +32,8 @@ interface ShoppingItem {
   quantity_to_buy: number;
   unit: string;
   category: string;
-  completed: boolean;
+  status: "PENDING" | "PURCHASED";
 }
-
-/* -------------------------------------------------------------------------- */
-/* Dummy Data                                                                 */
-/* -------------------------------------------------------------------------- */
-
-const dummyShoppingItems: ShoppingItem[] = [
-  {
-    id: 1,
-    ingredient_name: "Paneer",
-    required_quantity: 500,
-    pantry_quantity: 100,
-    quantity_to_buy: 400,
-    unit: "g",
-    category: "Dairy",
-    completed: false,
-  },
-  {
-    id: 2,
-    ingredient_name: "Tomato",
-    required_quantity: 8,
-    pantry_quantity: 2,
-    quantity_to_buy: 6,
-    unit: "pcs",
-    category: "Vegetables",
-    completed: false,
-  },
-  {
-    id: 3,
-    ingredient_name: "Onion",
-    required_quantity: 6,
-    pantry_quantity: 1,
-    quantity_to_buy: 5,
-    unit: "pcs",
-    category: "Vegetables",
-    completed: true,
-  },
-  {
-    id: 4,
-    ingredient_name: "Milk",
-    required_quantity: 2,
-    pantry_quantity: 0,
-    quantity_to_buy: 2,
-    unit: "liters",
-    category: "Dairy",
-    completed: false,
-  },
-  {
-    id: 5,
-    ingredient_name: "Rice",
-    required_quantity: 1000,
-    pantry_quantity: 400,
-    quantity_to_buy: 600,
-    unit: "g",
-    category: "Grains",
-    completed: true,
-  },
-  {
-    id: 6,
-    ingredient_name: "Spinach",
-    required_quantity: 2,
-    pantry_quantity: 0,
-    quantity_to_buy: 2,
-    unit: "bunches",
-    category: "Vegetables",
-    completed: false,
-  },
-  {
-    id: 7,
-    ingredient_name: "Greek Yogurt",
-    required_quantity: 500,
-    pantry_quantity: 0,
-    quantity_to_buy: 500,
-    unit: "g",
-    category: "Dairy",
-    completed: false,
-  },
-  {
-    id: 8,
-    ingredient_name: "Oats",
-    required_quantity: 500,
-    pantry_quantity: 200,
-    quantity_to_buy: 300,
-    unit: "g",
-    category: "Grains",
-    completed: false,
-  },
-];
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -139,28 +55,20 @@ const formatDate = (dateString: string) => {
 };
 
 const ShoppingListContainer = () => {
-  const [items, setItems] = useState(dummyShoppingItems);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const queryClient = useQueryClient();
+  const updateStatus = useUpdateShoppingListItemStatus();
 
-
-    const {
-        data,
-        isLoading: isMealPlanLoading,
-        isError: isMealPlanError,
-        error: mealPlanError,
-    } = useGetShoppingList();
-
-    console.log("data-->", data?.data)
-
-    const getAllShoppingListItems = data?.data || []
+  const { data, refetch } = useGetShoppingList();
+  const items = data?.data?.items ?? [];
 
   /* ---------------------------------------------------------------------- */
   /* Categories                                                             */
   /* ---------------------------------------------------------------------- */
 
-  const categories = useMemo(() => {
-    return ["All", ...Array.from(new Set(items.map((item) => item.category)))];
-  }, [items]);
+  // const categories = useMemo(() => {
+  //   return ["All", ...Array.from(new Set(items.map((item) => item.category)))];
+  // }, [items]);
 
   /* ---------------------------------------------------------------------- */
   /* Filtered Items                                                         */
@@ -171,17 +79,15 @@ const ShoppingListContainer = () => {
       return items;
     }
 
-    return items.filter((item) => item.category === selectedCategory);
+    return items.filter((item) => item.status !== "PURCHASED");
   }, [items, selectedCategory]);
 
   /* ---------------------------------------------------------------------- */
   /* Statistics                                                             */
   /* ---------------------------------------------------------------------- */
 
-  const totalItems = getAllShoppingListItems?.items?.length || 0;
-
-  const completedItems = items.filter((item) => item.completed).length;
-
+  const totalItems = items.length;
+  const completedItems = items.filter((item) => item.status === "PURCHASED").length;
   const pendingItems = totalItems - completedItems;
 
   const progress =
@@ -192,31 +98,34 @@ const ShoppingListContainer = () => {
   /* ---------------------------------------------------------------------- */
 
   const toggleItem = (id: number) => {
-    setItems((previousItems) =>
-      previousItems.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              completed: !item.completed,
-            }
-          : item,
-      ),
-    );
-  };
-
-  const removeItem = (id: number) => {
-    setItems((previousItems) => previousItems.filter((item) => item.id !== id));
+    updateStatus.mutate({
+      id,
+      status: "PURCHASED"
+    })
   };
 
   const clearCompleted = () => {
-    setItems((previousItems) =>
-      previousItems.filter((item) => !item.completed),
+    queryClient.setQueryData<GetShoppingListResponse>(
+      ["shopping-list", undefined],
+      (previousData) => {
+        if (!previousData) {
+          return previousData;
+        }
+
+        return {
+          ...previousData,
+          data: {
+            ...previousData.data,
+            items: previousData.data.items.filter((item) => !item.completed),
+          },
+        };
+      },
     );
   };
 
-  const resetItems = () => {
-    setItems(dummyShoppingItems);
+  const resetItems = async () => {
     setSelectedCategory("All");
+    await refetch();
   };
 
   return (
@@ -245,13 +154,13 @@ const ShoppingListContainer = () => {
             </div>
           </div>
 
-          <button
+          {/* <button
             type="button"
             className="flex w-fit items-center gap-2 rounded-xl bg-[#C86B38] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#D9824A]"
           >
             <Plus className="h-4 w-4" />
             Add Item
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -424,7 +333,7 @@ const ShoppingListContainer = () => {
 
             {/* Category Filter */}
 
-            <div className="flex gap-2 overflow-x-auto border-b border-[#26382A] p-4">
+            {/* <div className="flex gap-2 overflow-x-auto border-b border-[#26382A] p-4">
               {categories.map((category) => {
                 const active = category === selectedCategory;
 
@@ -443,15 +352,15 @@ const ShoppingListContainer = () => {
                   </button>
                 );
               })}
-            </div>
+            </div> */}
 
             {/* Items */}
 
             <div className="divide-y divide-[#26382A]">
-              {getAllShoppingListItems?.items?.length > 0 ? (
-                getAllShoppingListItems?.items?.map((item, index) => (
+              {filteredItems.length > 0 ? (
+                filteredItems.map((item) => (
                   <div
-                    key={index}
+                    key={item.id}
                     className={`group flex flex-col gap-4 p-5 transition md:flex-row md:items-center ${
                       item.completed
                         ? "bg-[#101D14]/50 opacity-60"
@@ -480,7 +389,7 @@ const ShoppingListContainer = () => {
                       <div className="flex flex-wrap items-center gap-2">
                         <h3
                           className={`font-medium ${
-                            item.completed ? "text-[#788278] line-through" : ""
+                            item.status === "PURCHASED" ? "text-[#788278] line-through" : ""
                           }`}
                         >
                           {item.ingredient_name}

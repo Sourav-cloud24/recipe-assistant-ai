@@ -54,11 +54,11 @@ const menuItems = [
     url: "/shopping-list",
     icon: ShoppingCart,
   },
-  {
-    title: "Favorites",
-    url: "/favorites",
-    icon: Heart,
-  },
+  // {
+  //   title: "Favorites",
+  //   url: "/favorites",
+  //   icon: Heart,
+  // },
 ];
 
 export default function AppSidebar() {
