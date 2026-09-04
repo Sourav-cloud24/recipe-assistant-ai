@@ -31,7 +31,7 @@ export const getMealPlansController = async (req, res) => {
     const user_id = req.user.userId;
 
     const { date } = req.query;
-    console.log("DATE-->", date)
+    console.log("DATE-->", date);
 
     let startDate;
     let endDate;
@@ -65,14 +65,14 @@ export const getMealPlansController = async (req, res) => {
 
       const day = selectedDate.getDay();
 
-      console.log("day-->", day)
+      console.log("day-->", day);
 
       const daysFromMonday = day === 0 ? 6 : day - 1;
 
       const monday = new Date(selectedDate);
 
       monday.setDate(selectedDate.getDate() - daysFromMonday);
-      console.log("monday-->", monday)
+      console.log("monday-->", monday);
 
       const sunday = new Date(monday);
 
@@ -83,10 +83,10 @@ export const getMealPlansController = async (req, res) => {
     }
 
     const mealPlans = await getUserMealPlan(user_id, startDate, endDate);
-//     console.log("GET MEAL PLAN");
-// console.log("user_id:", user_id);
-// console.log("startDate:", startDate);
-// console.log("endDate:", endDate);
+    //     console.log("GET MEAL PLAN");
+    // console.log("user_id:", user_id);
+    // console.log("startDate:", startDate);
+    // console.log("endDate:", endDate);
 
     return successResponse(res, {
       statusCode: 200,
