@@ -69,3 +69,21 @@ export const getMealPlansByUser = async (user_id, start_date, end_date) => {
 // console.log("REPOSITORY ROWS:", rows);
   return rows;
 };
+
+export const deleteMealPlan = async(id, user_id) => {
+// console.log("deleteMealPlan repo :", id, user_id);
+
+  const query = `
+    DELETE FROM meal_plans
+    WHERE id = $1
+      AND user_id = $2
+    RETURNING *
+  `;
+
+  const values = [id, user_id]
+
+  const {rows} = await pool.query(query, values)
+  // console.log("rows-->", rows[0]);
+
+  return rows[0]
+}

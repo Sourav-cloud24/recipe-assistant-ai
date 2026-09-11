@@ -74,14 +74,19 @@ export const updateShoppingListStatusController = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    console.log("PARAM ID:", id);
-    console.log("USER ID:", user_id);
-    console.log("STATUS:", status);
-
+    // Validate ID
+    if (!id || !/^\d+$/.test(id)) {
+      return errorResponse(res, {
+        statusCode: 400,
+        message: "Invalid shopping list item ID",
+      });
+    }
+    
+    // Validate status
     if (!["PENDING", "PURCHASED"].includes(status)) {
       return errorResponse(res, {
         statusCode: 400,
-        message: "Invalid status",
+        message: "Status must be either PENDING or PURCHASED",
       });
     }
 

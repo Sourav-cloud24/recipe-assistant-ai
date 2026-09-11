@@ -1,6 +1,7 @@
 "use client";
 
 import type { GeneratedRecipe, GenerateRecipeRequest } from "../types/recipe.type";
+import { useRouter } from "next/navigation";
 
 interface GeneratedRecipeProps {
   recipe: GeneratedRecipe;
@@ -12,8 +13,11 @@ const GeneratedRecipe = ({
   onSave
 }: GeneratedRecipeProps) => {
 
+  const router = useRouter()
+
   const handleSave = () => {
     onSave(recipe)
+    router.push("/my-recipe")
   }
   return (
     <section className="rounded-2xl border border-[#344238] bg-[#223027] p-6 text-[#F3EEDF] shadow-2xl">

@@ -15,11 +15,13 @@ import {
   Sun,
   Users,
   X,
+  Trash2,
 } from "lucide-react";
 
 import { DialogDemo } from "./MealPlanDialog";
 import { useRecipes } from "@/features/my-recipes/hooks/useRecipes";
 import { useGetMealPlans } from "../hooks/useGetMealPlans";
+import { useDeleteMealPlan } from "../hooks/useDeleteMealPlan";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -147,10 +149,6 @@ const formatMealType = (value: MealType) => {
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 };
 
-/*
- Dialog currently receives dates in DD-MM-YYYY format
- from your existing implementation.
-*/
 const formatDialogDate = (value: string) => {
   if (!value) return "";
 
@@ -159,7 +157,10 @@ const formatDialogDate = (value: string) => {
   return `${day}-${month}-${year}`;
 };
 
-const generateWeekDays = (startDate: string, endDate: string): WeekDay[] => {
+const generateWeekDays = (
+  startDate: string,
+  endDate: string,
+): WeekDay[] => {
   if (!startDate || !endDate) {
     return [];
   }
@@ -247,13 +248,17 @@ const MealPlanContainer = () => {
 
   const [selectedMealDate, setSelectedMealDate] = useState("");
 
-  const [selectedMealType, setSelectedMealType] = useState<MealType | "">("");
+  const [selectedMealType, setSelectedMealType] =
+    useState<MealType | "">("");
 
   /* ------------------------------------------------------------------------ */
   /* Recipe API                                                               */
   /* ------------------------------------------------------------------------ */
 
-  const { data: recipeResponse, isLoading: isRecipesLoading } = useRecipes();
+  const {
+    data: recipeResponse,
+    isLoading: isRecipesLoading,
+  } = useRecipes();
 
   const recipes = recipeResponse?.data ?? [];
 
@@ -269,6 +274,15 @@ const MealPlanContainer = () => {
   } = useGetMealPlans(selectedDateByUser);
 
   /* ------------------------------------------------------------------------ */
+  /* Delete Meal Plan API                                                     */
+  /* ------------------------------------------------------------------------ */
+
+const {
+  mutate: deleteMealPlan,
+  isPending: isDeletingMeal,
+} = useDeleteMealPlan();
+
+  /* ------------------------------------------------------------------------ */
   /* API Data                                                                 */
   /* ------------------------------------------------------------------------ */
 
@@ -276,7 +290,8 @@ const MealPlanContainer = () => {
 
   const endDate = mealPlanResponse?.data?.end_date ?? "";
 
-  const mealPlans: MealPlan[] = mealPlanResponse?.data?.meal_plans ?? [];
+  const mealPlans: MealPlan[] =
+    mealPlanResponse?.data?.meal_plans ?? [];
 
   /* ------------------------------------------------------------------------ */
   /* Generate Week From API                                                   */
@@ -299,10 +314,6 @@ const MealPlanContainer = () => {
     const today = formatDateToApi(new Date());
 
     setSelectedDate((currentSelectedDate) => {
-      /*
-         Keep current selection if it
-         still belongs to this API week.
-        */
       const currentStillExists = weekDays.some(
         (day) => day.date === currentSelectedDate,
       );
@@ -311,20 +322,14 @@ const MealPlanContainer = () => {
         return currentSelectedDate;
       }
 
-      /*
-         If today belongs to this week,
-         automatically select today.
-        */
-      const todayExists = weekDays.some((day) => day.date === today);
+      const todayExists = weekDays.some(
+        (day) => day.date === today,
+      );
 
       if (todayExists) {
         return today;
       }
 
-      /*
-         Otherwise select the first
-         API date.
-        */
       return weekDays[0].date;
     });
   }, [weekDays]);
@@ -338,7 +343,9 @@ const MealPlanContainer = () => {
       return;
     }
 
-    const updatedMeal = mealPlans.find((meal) => meal.id === selectedMeal.id);
+    const updatedMeal = mealPlans.find(
+      (meal) => meal.id === selectedMeal.id,
+    );
 
     if (!updatedMeal) {
       setSelectedMeal(null);
@@ -353,7 +360,9 @@ const MealPlanContainer = () => {
   /* ------------------------------------------------------------------------ */
 
   const mealsForSelectedDay = useMemo(() => {
-    return mealPlans.filter((meal) => meal.meal_date === selectedDate);
+    return mealPlans.filter(
+      (meal) => meal.meal_date === selectedDate,
+    );
   }, [mealPlans, selectedDate]);
 
   /* ------------------------------------------------------------------------ */
@@ -367,10 +376,10 @@ const MealPlanContainer = () => {
   /* ------------------------------------------------------------------------ */
 
   const getMeal = (type: MealType, date: string) => {
-    // console.log("type-->", type, "date-->",)
     return mealPlans.find(
       (meal) =>
-        meal.meal_date.split("T")[0] === date && meal.meal_type === type,
+        meal.meal_date.split("T")[0] === date &&
+        meal.meal_type === type,
     );
   };
 
@@ -378,18 +387,30 @@ const MealPlanContainer = () => {
   /* Get First Available Meal Type                                            */
   /* ------------------------------------------------------------------------ */
 
-  const getFirstAvailableMealType = (date: string): MealType => {
+  const getFirstAvailableMealType = (
+    date: string,
+  ): MealType => {
     const existingTypes = mealPlans
       .filter((meal) => meal.meal_date === date)
       .map((meal) => meal.meal_type);
 
-    const available = mealRows.find((row) => !existingTypes.includes(row.type));
+    const available = mealRows.find(
+      (row) => !existingTypes.includes(row.type),
+    );
 
     return available?.type ?? "BREAKFAST";
   };
 
   /* ------------------------------------------------------------------------ */
-  /* Day Navigation                                                          */
+  /* Delete Meal                                                              */
+  /* ------------------------------------------------------------------------ */
+
+  const handleDeleteMeal = (mealId: number) => {
+    deleteMealPlan(mealId)
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* Day Navigation                                                           */
   /* ------------------------------------------------------------------------ */
 
   const handlePreviousDay = () => {
@@ -397,10 +418,13 @@ const MealPlanContainer = () => {
       return;
     }
 
-    const currentIndex = weekDays.findIndex((day) => day.date === selectedDate);
+    const currentIndex = weekDays.findIndex(
+      (day) => day.date === selectedDate,
+    );
 
     if (currentIndex > 0) {
-      const previousDate = weekDays[currentIndex - 1].date;
+      const previousDate =
+        weekDays[currentIndex - 1].date;
 
       setSelectedDate(previousDate);
 
@@ -413,10 +437,16 @@ const MealPlanContainer = () => {
       return;
     }
 
-    const currentIndex = weekDays.findIndex((day) => day.date === selectedDate);
+    const currentIndex = weekDays.findIndex(
+      (day) => day.date === selectedDate,
+    );
 
-    if (currentIndex >= 0 && currentIndex < weekDays.length - 1) {
-      const nextDate = weekDays[currentIndex + 1].date;
+    if (
+      currentIndex >= 0 &&
+      currentIndex < weekDays.length - 1
+    ) {
+      const nextDate =
+        weekDays[currentIndex + 1].date;
 
       setSelectedDate(nextDate);
 
@@ -431,7 +461,9 @@ const MealPlanContainer = () => {
   const handleToday = () => {
     const today = formatDateToApi(new Date());
 
-    const todayExists = weekDays.some((day) => day.date === today);
+    const todayExists = weekDays.some(
+      (day) => day.date === today,
+    );
 
     if (todayExists) {
       setSelectedDate(today);
@@ -451,7 +483,10 @@ const MealPlanContainer = () => {
   /* Open Add Meal Dialog                                                     */
   /* ------------------------------------------------------------------------ */
 
-  const toggleAddMeal = (date: string, type: MealType) => {
+  const toggleAddMeal = (
+    date: string,
+    type: MealType,
+  ) => {
     setSelectedDate(date);
 
     setSelectedMealDate(formatDialogDate(date));
@@ -461,11 +496,9 @@ const MealPlanContainer = () => {
     setAddMealOpenDialog(true);
   };
 
-  const toggleDateCheck = (date:string) => {
-    setSelectedDateByUser(date)
-  }
-
-  console.log("SelectedDateByUser-->", selectedDateByUser)
+  const toggleDateCheck = (date: string) => {
+    setSelectedDateByUser(date);
+  };
 
   /* ------------------------------------------------------------------------ */
   /* Main Add Meal Button                                                     */
@@ -476,7 +509,8 @@ const MealPlanContainer = () => {
       return;
     }
 
-    const mealType = getFirstAvailableMealType(selectedDate);
+    const mealType =
+      getFirstAvailableMealType(selectedDate);
 
     toggleAddMeal(selectedDate, mealType);
   };
@@ -507,9 +541,7 @@ const MealPlanContainer = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#07110B] px-4 text-[#F3EEDF]">
         <div className="w-full max-w-md rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-          <div className="flex items-center gap-3">
-            <CalendarDays className="h-5 w-5 text-red-400" />
-          </div>
+          <CalendarDays className="mx-auto h-5 w-5 text-red-400" />
 
           <h2 className="mt-4 text-lg font-semibold">
             Unable to load meal plan
@@ -531,9 +563,8 @@ const MealPlanContainer = () => {
 
   return (
     <div className="min-h-screen bg-[#07110B] text-[#F3EEDF]">
-      {/* ------------------------------------------------------------------ */}
-      {/* Header                                                             */}
-      {/* ------------------------------------------------------------------ */}
+
+      {/* Header */}
 
       <div className="border-b border-[#26382A] px-2.5 py-3 lg:px-4">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
@@ -560,44 +591,46 @@ const MealPlanContainer = () => {
         </div>
       </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Main Content                                                       */}
-      {/* ------------------------------------------------------------------ */}
+      {/* Main */}
 
       <main className="px-2.5 py-4 lg:px-4">
-        {/* ---------------------------------------------------------------- */}
-        {/* Controls                                                         */}
-        {/* ---------------------------------------------------------------- */}
+
+        {/* Controls */}
 
         <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            {/* Week Range */}
 
             <div className="flex items-center overflow-hidden rounded-xl border border-[#344238] bg-[#101D14]">
               <div className="border-r border-[#344238] p-3 text-[#C86B38]">
                 <CalendarDays className="h-4 w-4" />
+
                 <input
                   type="date"
                   name="calendar"
                   id="calendar"
                   value={selectedDateByUser}
                   className="rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white outline-none focus:border-red-400"
-                  onChange={(e) => toggleDateCheck(e.target.value)}
+                  onChange={(e) =>
+                    toggleDateCheck(e.target.value)
+                  }
                 />
               </div>
 
               <span className="px-4 text-sm text-[#DADDD4]">
                 {startDate && endDate
-                  ? `${formatDisplayDate(startDate)} - ${formatDisplayDate(
-                      endDate,
-                    )}`
+                  ? `${formatDisplayDate(
+                      startDate,
+                    )} - ${formatDisplayDate(endDate)}`
                   : "No week available"}
               </span>
 
               <button
                 type="button"
                 onClick={handlePreviousDay}
-                disabled={!selectedDate || weekDays[0]?.date === selectedDate}
+                disabled={
+                  !selectedDate ||
+                  weekDays[0]?.date === selectedDate
+                }
                 className="border-l border-[#344238] p-3 text-[#A8A99A] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -608,15 +641,14 @@ const MealPlanContainer = () => {
                 onClick={handleNextDay}
                 disabled={
                   !selectedDate ||
-                  weekDays[weekDays.length - 1]?.date === selectedDate
+                  weekDays[weekDays.length - 1]?.date ===
+                    selectedDate
                 }
                 className="border-l border-[#344238] p-3 text-[#A8A99A] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
-
-            {/* Today */}
 
             <button
               type="button"
@@ -626,17 +658,16 @@ const MealPlanContainer = () => {
               Today
             </button>
 
-            {/* Planned Count */}
-
             <div className="rounded-xl border border-[#344238] bg-[#101D14] px-4 py-3 text-sm text-[#8D988E]">
               <span className="font-semibold text-[#E8A06F]">
                 {plannedMealCount}
               </span>{" "}
-              {plannedMealCount === 1 ? "meal" : "meals"} planned
+              {plannedMealCount === 1
+                ? "meal"
+                : "meals"}{" "}
+              planned
             </div>
           </div>
-
-          {/* Add Meal */}
 
           <button
             type="button"
@@ -649,9 +680,7 @@ const MealPlanContainer = () => {
           </button>
         </div>
 
-        {/* ---------------------------------------------------------------- */}
-        {/* Empty API State                                                   */}
-        {/* ---------------------------------------------------------------- */}
+        {/* Empty State */}
 
         {mealPlans.length === 0 && (
           <div className="mb-5 flex items-center gap-4 rounded-2xl border border-[#344238] bg-[#101D14] px-5 py-4">
@@ -673,26 +702,22 @@ const MealPlanContainer = () => {
                 <span className="text-[#B7BCA8]">
                   {formatDisplayDate(endDate)}
                 </span>
-                . Select an empty slot below to add your first meal.
+                .
               </p>
             </div>
           </div>
         )}
 
-        {/* ---------------------------------------------------------------- */}
-        {/* Planner + Details                                                 */}
-        {/* ---------------------------------------------------------------- */}
+        {/* Planner + Details */}
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
-          {/* -------------------------------------------------------------- */}
-          {/* Planner                                                        */}
-          {/* -------------------------------------------------------------- */}
+
+          {/* Planner */}
 
           <div className="overflow-x-auto rounded-2xl border border-[#26382A] bg-[#0E1B12]">
-            <div className="">
-              {/* ---------------------------------------------------------- */}
-              {/* Week Header                                                */}
-              {/* ---------------------------------------------------------- */}
+            <div>
+
+              {/* Week Header */}
 
               <div
                 className="grid border-b border-[#26382A]"
@@ -708,7 +733,8 @@ const MealPlanContainer = () => {
                 </div>
 
                 {weekDays.map((day) => {
-                  const active = day.date === selectedDate;
+                  const active =
+                    day.date === selectedDate;
 
                   return (
                     <button
@@ -716,11 +742,12 @@ const MealPlanContainer = () => {
                       key={day.date}
                       onClick={() => {
                         setSelectedDate(day.date);
-
                         setSelectedMeal(null);
                       }}
                       className={`relative border-l border-[#26382A] px-2 py-4 text-center transition ${
-                        active ? "bg-[#18251A]" : "hover:bg-[#142117]"
+                        active
+                          ? "bg-[#18251A]"
+                          : "hover:bg-[#142117]"
                       }`}
                     >
                       {day.isToday && (
@@ -729,7 +756,9 @@ const MealPlanContainer = () => {
 
                       <p
                         className={`text-sm font-semibold ${
-                          active ? "text-[#E8A06F]" : "text-[#F3EEDF]"
+                          active
+                            ? "text-[#E8A06F]"
+                            : "text-[#F3EEDF]"
                         }`}
                       >
                         {day.day}
@@ -747,9 +776,7 @@ const MealPlanContainer = () => {
                 })}
               </div>
 
-              {/* ---------------------------------------------------------- */}
-              {/* Meal Rows                                                  */}
-              {/* ---------------------------------------------------------- */}
+              {/* Meal Rows */}
 
               {mealRows.map((row) => {
                 const RowIcon = row.icon;
@@ -784,9 +811,13 @@ const MealPlanContainer = () => {
                     {/* Days */}
 
                     {weekDays.map((day) => {
-                      const meal = getMeal(row.type, day.date);
+                      const meal = getMeal(
+                        row.type,
+                        day.date,
+                      );
 
-                      const active = day.date === selectedDate;
+                      const active =
+                        day.date === selectedDate;
 
                       return (
                         <div
@@ -797,64 +828,103 @@ const MealPlanContainer = () => {
                         >
                           {meal ? (
                             /*
-                                 API Meal
-                                */
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedMeal(meal);
-
-                                setSelectedDate(day.date);
-                              }}
+                             * Existing Meal
+                             */
+                            <div
                               className={`group relative flex h-full min-h-31.25 w-full flex-col justify-between rounded-xl border p-3 text-left transition ${
                                 selectedMeal?.id === meal.id
                                   ? "border-[#C86B38] bg-[#1B281C]"
                                   : "border-[#344238] bg-[#172319] hover:border-[#68774C]"
                               }`}
                             >
-                              <div>
-                                <div className="mb-2 flex items-center justify-between gap-2">
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#253326] text-[#E8A06F]">
-                                    <Hash className="h-4 w-4" />
+                              {/* Meal Content */}
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedMeal(meal);
+                                  setSelectedDate(day.date);
+                                }}
+                                className="w-full text-left"
+                              >
+                                <div>
+                                  <div className="mb-2 flex items-center justify-between gap-2">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#253326] text-[#E8A06F]">
+                                      <Hash className="h-4 w-4" />
+                                    </div>
+
+                                    <span className="text-[10px] text-[#667168]">
+                                      #{meal.id}
+                                    </span>
                                   </div>
 
-                                  <span className="text-[10px] text-[#667168]">
-                                    #{meal.id}
-                                  </span>
+                                  <p className="line-clamp-2 text-xs font-semibold leading-4 text-[#F3EEDF]">
+                                    Recipe #{meal.recipe_id}
+                                  </p>
+
+                                  <p className="mt-1 text-[10px] text-[#7F8A80]">
+                                    {formatMealType(
+                                      meal.meal_type,
+                                    )}
+                                  </p>
                                 </div>
 
-                                <p className="line-clamp-2 text-xs font-semibold leading-4 text-[#F3EEDF]">
-                                  Recipe #{meal.recipe_id}
-                                </p>
+                                <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#8D988E]">
+                                  <Users className="h-3 w-3" />
 
-                                <p className="mt-1 text-[10px] text-[#7F8A80]">
-                                  {formatMealType(meal.meal_type)}
-                                </p>
-                              </div>
+                                  <span>
+                                    {meal.servings}{" "}
+                                    {meal.servings === 1
+                                      ? "serving"
+                                      : "servings"}
+                                  </span>
+                                </div>
+                              </button>
 
-                              <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#8D988E]">
-                                <Users className="h-3 w-3" />
+                              {/* Delete Button */}
 
-                                <span>
-                                  {meal.servings}{" "}
-                                  {meal.servings === 1 ? "serving" : "servings"}
-                                </span>
-                              </div>
-                            </button>
+                              <button
+                                type="button"
+                                title="Delete meal"
+                                aria-label={`Delete meal ${meal.id}`}
+                                disabled={isDeletingMeal}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+
+                                  handleDeleteMeal(
+                                    meal.id,
+                                  );
+                                }}
+                                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg border border-transparent text-[#7F8A80] opacity-0 transition hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {isDeletingMeal ? (
+                                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#7F8A80] border-t-transparent" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
                           ) : (
                             /*
-                                 Empty Slot
-                                */
+                             * Empty Slot
+                             */
                             <button
                               type="button"
-                              onClick={() => toggleAddMeal(day.date, row.type)}
+                              onClick={() =>
+                                toggleAddMeal(
+                                  day.date,
+                                  row.type,
+                                )
+                              }
                               className="flex h-full min-h-31.25 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#344238] text-[#69746C] transition hover:border-[#C86B38] hover:bg-[#C86B38]/5 hover:text-[#E8A06F]"
                             >
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#172319]">
                                 <Plus className="h-4 w-4" />
                               </div>
 
-                              <span className="text-xs">{row.addLabel}</span>
+                              <span className="text-xs">
+                                {row.addLabel}
+                              </span>
                             </button>
                           )}
                         </div>
@@ -867,21 +937,18 @@ const MealPlanContainer = () => {
               {/* Footer */}
 
               <div className="flex items-center justify-center gap-2 border-t border-[#26382A] px-5 py-4 text-sm text-[#9DA695]">
-                <span>🍃</span>A well planned meal is a step towards a healthier
+                <span>🍃</span>
+                A well planned meal is a step towards a healthier
                 you.
               </div>
             </div>
           </div>
 
-          {/* -------------------------------------------------------------- */}
-          {/* Details Panel                                                  */}
-          {/* -------------------------------------------------------------- */}
+          {/* Details Panel */}
 
           <aside className="rounded-2xl border border-[#26382A] bg-[#0E1B12] p-4">
             {selectedMeal ? (
               <>
-                {/* Header */}
-
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-wider text-[#758076]">
@@ -889,25 +956,29 @@ const MealPlanContainer = () => {
                     </p>
 
                     <p className="mt-1 text-sm font-medium text-[#D88A3E]">
-                      {formatLongDate(selectedMeal.meal_date)}
+                      {formatLongDate(
+                        selectedMeal.meal_date,
+                      )}
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => setSelectedMeal(null)}
+                    onClick={() =>
+                      setSelectedMeal(null)
+                    }
                     className="rounded-lg border border-[#344238] bg-[#111D14] p-2 text-[#929B92] transition hover:border-[#C86B38] hover:text-white"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
 
-                {/* Recipe */}
-
                 <div className="rounded-xl border border-[#344238] bg-[#172319] p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs text-[#7E887F]">Recipe</p>
+                      <p className="text-xs text-[#7E887F]">
+                        Recipe
+                      </p>
 
                       <h2 className="mt-1 text-xl font-semibold text-[#F3EEDF]">
                         Recipe #{selectedMeal.recipe_id}
@@ -922,11 +993,11 @@ const MealPlanContainer = () => {
                   <div className="mt-3 flex items-center gap-2 text-sm text-[#A8A99A]">
                     <span className="h-2 w-2 rounded-full bg-[#C86B38]" />
 
-                    {formatMealType(selectedMeal.meal_type)}
+                    {formatMealType(
+                      selectedMeal.meal_type,
+                    )}
                   </div>
                 </div>
-
-                {/* Basic Information */}
 
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <DetailCard
@@ -941,7 +1012,9 @@ const MealPlanContainer = () => {
 
                   <DetailCard
                     label="Servings"
-                    value={String(selectedMeal.servings)}
+                    value={String(
+                      selectedMeal.servings,
+                    )}
                     icon={Users}
                   />
 
@@ -950,8 +1023,6 @@ const MealPlanContainer = () => {
                     value={`#${selectedMeal.user_id}`}
                   />
                 </div>
-
-                {/* Meal Date */}
 
                 <div className="mt-4 rounded-xl border border-[#344238] bg-[#111D14] p-4">
                   <div className="flex items-center gap-3">
@@ -965,13 +1036,13 @@ const MealPlanContainer = () => {
                       </p>
 
                       <p className="mt-1 text-sm font-medium text-[#F3EEDF]">
-                        {formatDisplayDate(selectedMeal.meal_date)}
+                        {formatDisplayDate(
+                          selectedMeal.meal_date,
+                        )}
                       </p>
                     </div>
                   </div>
                 </div>
-
-                {/* Notes */}
 
                 <div className="mt-5">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[#D88A3E]">
@@ -987,8 +1058,6 @@ const MealPlanContainer = () => {
                   </div>
                 </div>
 
-                {/* Record Information */}
-
                 <div className="mt-5">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[#758076]">
                     Record Information
@@ -997,14 +1066,18 @@ const MealPlanContainer = () => {
                   <div className="space-y-3 rounded-xl border border-[#26382A] bg-[#101A12] p-4">
                     <RecordRow
                       label="Created"
-                      value={formatDateTime(selectedMeal.created_at)}
+                      value={formatDateTime(
+                        selectedMeal.created_at,
+                      )}
                     />
 
                     <div className="border-t border-[#26382A]" />
 
                     <RecordRow
                       label="Last updated"
-                      value={formatDateTime(selectedMeal.updated_at)}
+                      value={formatDateTime(
+                        selectedMeal.updated_at,
+                      )}
                     />
                   </div>
                 </div>
@@ -1049,9 +1122,7 @@ const MealPlanContainer = () => {
           </aside>
         </div>
 
-        {/* ---------------------------------------------------------------- */}
-        {/* Selected Day Summary                                              */}
-        {/* ---------------------------------------------------------------- */}
+        {/* Selected Day Summary */}
 
         <div className="mt-5 rounded-2xl border border-[#26382A] bg-[#101D14] p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1071,14 +1142,15 @@ const MealPlanContainer = () => {
               <span className="font-semibold text-[#E8A06F]">
                 {mealsForSelectedDay.length}
               </span>{" "}
-              {mealsForSelectedDay.length === 1 ? "meal" : "meals"} planned
+              {mealsForSelectedDay.length === 1
+                ? "meal"
+                : "meals"}{" "}
+              planned
             </div>
           </div>
         </div>
 
-        {/* ---------------------------------------------------------------- */}
-        {/* Feature Cards                                                     */}
-        {/* ---------------------------------------------------------------- */}
+        {/* Feature Cards */}
 
         <div className="mt-5 grid gap-4 md:grid-cols-3">
           <FeatureCard
@@ -1104,9 +1176,7 @@ const MealPlanContainer = () => {
         </div>
       </main>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Add Meal Dialog                                                    */}
-      {/* ------------------------------------------------------------------ */}
+      {/* Add Meal Dialog */}
 
       <DialogDemo
         open={openAddMealDialog}
@@ -1129,7 +1199,11 @@ interface DetailCardProps {
   icon?: typeof Users;
 }
 
-const DetailCard = ({ label, value, icon: Icon }: DetailCardProps) => {
+const DetailCard = ({
+  label,
+  value,
+  icon: Icon,
+}: DetailCardProps) => {
   return (
     <div className="rounded-xl bg-[#172319] p-3">
       <div className="flex items-center gap-2 text-[#A8A99A]">
@@ -1138,7 +1212,9 @@ const DetailCard = ({ label, value, icon: Icon }: DetailCardProps) => {
         <span className="text-xs">{label}</span>
       </div>
 
-      <p className="mt-1 text-sm font-medium text-[#F3EEDF]">{value}</p>
+      <p className="mt-1 text-sm font-medium text-[#F3EEDF]">
+        {value}
+      </p>
     </div>
   );
 };
@@ -1152,12 +1228,19 @@ interface RecordRowProps {
   value: string;
 }
 
-const RecordRow = ({ label, value }: RecordRowProps) => {
+const RecordRow = ({
+  label,
+  value,
+}: RecordRowProps) => {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className="text-xs text-[#758076]">{label}</span>
+      <span className="text-xs text-[#758076]">
+        {label}
+      </span>
 
-      <span className="text-right text-xs text-[#B7BCA8]">{value}</span>
+      <span className="text-right text-xs text-[#B7BCA8]">
+        {value}
+      </span>
     </div>
   );
 };
@@ -1189,7 +1272,9 @@ const FeatureCard = ({
         <div>
           <h3 className="font-medium">{title}</h3>
 
-          <p className="mt-1 text-xs leading-5 text-[#758076]">{description}</p>
+          <p className="mt-1 text-xs leading-5 text-[#758076]">
+            {description}
+          </p>
         </div>
       </div>
 
@@ -1204,3 +1289,4 @@ const FeatureCard = ({
 };
 
 export default MealPlanContainer;
+

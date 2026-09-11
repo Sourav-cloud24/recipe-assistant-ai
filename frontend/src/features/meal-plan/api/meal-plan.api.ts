@@ -2,6 +2,7 @@ import apiClient from "@/services/apiClient";
 import {
   CreateMealPlan,
   CreateMealPlanResponse,
+  DeleteMealPlanResponse,
   GetMealPlansResponse,
 } from "../types/meal-plan.type";
 
@@ -24,6 +25,12 @@ export const mealPlanApi = {
         params: date ? { date } : undefined, 
       }
     );
+
+    return response.data;
+  },
+
+  deleteMealPlan: async (id: number): Promise<DeleteMealPlanResponse> => {
+    const response = await apiClient.delete(`/meal-plan/${id}`);
 
     return response.data;
   },

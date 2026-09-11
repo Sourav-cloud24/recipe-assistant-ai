@@ -1,4 +1,8 @@
-import { addMealPlan, getUserMealPlan } from "./meal-planner.service.js";
+import {
+  addMealPlan,
+  deleteUserMealPlan,
+  getUserMealPlan,
+} from "./meal-planner.service.js";
 import { errorResponse, successResponse } from "../../utils/response.js";
 
 export const createMealPlanController = async (req, res) => {
@@ -98,6 +102,37 @@ export const getMealPlansController = async (req, res) => {
       },
     });
   } catch (error) {
+    return errorResponse(res, {
+      statusCode: 500,
+      message: error.message,
+    });
+  }
+};
+
+export const deleteMealPlanController = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    // console.log("deleteMealPlanController :", userId, id);
+
+    if (!id) {
+      return errorResponse(res, {
+        statusCode: 400,
+        message: "Meal plan ID is required",
+      });
+    }
+
+    const deleteMealPlan = await deleteUserMealPlan(id,userId);
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: "Meal plan deleted successfully",
+      data: deleteMealPlan,
+    });
+  } catch (error) {
+    console.error("DELETE MEAL PLAN ERROR:", error);
+
     return errorResponse(res, {
       statusCode: 500,
       message: error.message,

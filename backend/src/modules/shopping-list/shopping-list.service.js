@@ -5,22 +5,28 @@ import {
   createShoppingListItem,
   upsertShoppingListItem,
   updateShoppingListStatus,
+  getExistingShoppingList,
 } from "./shopping-list.repository.js";
 
 export const getShoppingList = async (user_id, start_date, end_date) => {
-  // 1. Get meal plans for the selected week
+  // --------------------------------------------------
+  // 1. Get meal plans for selected week
+  // --------------------------------------------------
+
   const mealPlans = await getMealPlansForShoppingList(
     user_id,
     start_date,
     end_date,
   );
 
-  // If no meal plans exist
   if (mealPlans.length === 0) {
     return [];
   }
 
-  // 2. Extract recipe IDs
+  // --------------------------------------------------
+  // 2. Count recipes
+  // --------------------------------------------------
+
   const recipeCounts = {};
 
   for (const mealPlan of mealPlans) {
@@ -35,70 +41,189 @@ export const getShoppingList = async (user_id, start_date, end_date) => {
 
   console.log("RECIPE COUNTS:", recipeCounts);
 
+  // --------------------------------------------------
+  // 3. Get unique recipe IDs
+  // --------------------------------------------------
+
   const recipeIds = Object.keys(recipeCounts);
 
   console.log("UNIQUE RECIPE IDS:", recipeIds);
 
-  // 3. Get all ingredients required by those recipes
+  // --------------------------------------------------
+  // 4. Get recipe ingredients
+  // --------------------------------------------------
+
   const recipeIngredients =
     await getRecipeIngredientsForShoppingList(recipeIds);
 
-  // 4. Get user's pantry items
+  // --------------------------------------------------
+  // 5. Get pantry items
+  // --------------------------------------------------
+
   const pantryItems = await getPantryItemsForShoppingList(user_id);
 
-  // 5. Combine same ingredients from multiple recipes
+  // --------------------------------------------------
+  // 6. Get existing shopping list
+  // --------------------------------------------------
+
+  const existingShoppingList = await getExistingShoppingList({
+    user_id,
+    week_start_date: start_date,
+  });
+
+  // --------------------------------------------------
+  // 7. Create pantry lookup
+  // --------------------------------------------------
+
+  const pantryMap = {};
+
+  for (const pantryItem of pantryItems) {
+    const key = `${pantryItem.ingredient_name.trim().toLowerCase()}-${pantryItem.unit.trim().toLowerCase()}`;
+
+    pantryMap[key] = Number(pantryItem.quantity);
+  }
+
+  // --------------------------------------------------
+  // 8. Create existing shopping-list lookup
+  // --------------------------------------------------
+
+  const existingShoppingMap = {};
+
+  for (const item of existingShoppingList) {
+    const key = `${item.ingredient_name.trim().toLowerCase()}-${item.unit.trim().toLowerCase()}`;
+
+    existingShoppingMap[key] = {
+      id: item.id,
+
+      required_quantity: Number(item.required_quantity),
+
+      purchased_quantity: Number(item.purchased_quantity),
+
+      quantity_to_buy: Number(item.quantity_to_buy),
+
+      status: item.status,
+    };
+  }
+
+  // --------------------------------------------------
+  // 9. Calculate TOTAL ingredient requirement
+  // --------------------------------------------------
+
   const requiredIngredients = {};
 
   for (const ingredient of recipeIngredients) {
     const recipeCount = recipeCounts[ingredient.recipe_id] ?? 1;
 
-    const key = ingredient.ingredient_name.trim().toLowerCase();
+    const quantity = Number(ingredient.quantity);
 
-    const totalQuantity = Number(ingredient.quantity) * recipeCount;
+    // Ignore invalid quantities
+    if (Number.isNaN(quantity)) {
+      console.warn("Invalid ingredient quantity:", ingredient);
+
+      continue;
+    }
+
+    const key = `${ingredient.ingredient_name.trim().toLowerCase()}-${ingredient.unit.trim().toLowerCase()}`;
+
+    const totalQuantity = quantity * recipeCount;
 
     if (requiredIngredients[key]) {
       requiredIngredients[key].quantity += totalQuantity;
     } else {
       requiredIngredients[key] = {
         ingredient_name: ingredient.ingredient_name,
+
         quantity: totalQuantity,
+
         unit: ingredient.unit,
       };
     }
   }
 
-  // 6. Create a lookup object for pantry items
-  const pantryMap = {};
+  // --------------------------------------------------
+  // 10. Calculate shopping list
+  // --------------------------------------------------
 
-  for (const pantryItem of pantryItems) {
-    const key = `${pantryItem.ingredient_name.toLowerCase()}-${pantryItem.unit.toLowerCase()}`;
+const shoppingList = [];
 
-    pantryMap[key] = Number(pantryItem.quantity);
-  }
+for (const key in requiredIngredients) {
+  const requiredIngredient = requiredIngredients[key];
 
-  // 7. Compare required ingredients with pantry
-  const shoppingList = [];
+  const totalRequiredQuantity =
+    requiredIngredient.quantity;
 
-  for (const key in requiredIngredients) {
-    const requiredIngredient = requiredIngredients[key];
+  const existingItem =
+    existingShoppingMap[key];
 
-    const pantryQuantity = pantryMap[key] ?? 0;
+  const pantryQuantity =
+    pantryMap[key] ?? 0;
 
-    const requiredQuantity = requiredIngredient.quantity;
+  // Amount already purchased previously
+  const purchasedQuantity =
+    existingItem?.purchased_quantity ?? 0;
 
-    const quantityToBuy = requiredQuantity - pantryQuantity;
+  /*
+    Example:
 
-    // Only add if user does not have enough
-    if (quantityToBuy > 0) {
-      shoppingList.push({
-        ingredient_name: requiredIngredient.ingredient_name,
-        required_quantity: requiredQuantity,
-        pantry_quantity: pantryQuantity,
-        quantity_to_buy: quantityToBuy,
-        unit: requiredIngredient.unit,
-      });
-    }
-  }
+    Total requirement = 300g
+    Already purchased = 100g
+
+    300 - 100 = 200g still needed
+  */
+
+  const quantityToBuy = Math.max(
+    totalRequiredQuantity -
+      purchasedQuantity -
+      pantryQuantity,
+    0,
+  );
+
+  const status =
+    quantityToBuy > 0
+      ? "PENDING"
+      : "PURCHASED";
+
+  console.log("SHOPPING CALCULATION:", {
+    ingredient:
+      requiredIngredient.ingredient_name,
+
+    totalRequiredQuantity,
+
+    purchasedQuantity,
+
+    pantryQuantity,
+
+    quantityToBuy,
+
+    status,
+  });
+
+  shoppingList.push({
+    ingredient_name:
+      requiredIngredient.ingredient_name,
+
+    required_quantity:
+      totalRequiredQuantity,
+
+    pantry_quantity:
+      pantryQuantity,
+
+    quantity_to_buy:
+      quantityToBuy,
+
+    unit:
+      requiredIngredient.unit,
+
+    id:
+      existingItem?.id ?? null,
+
+    status,
+  });
+}
+
+  // --------------------------------------------------
+  // 11. Save latest shopping-list state
+  // --------------------------------------------------
 
   for (const item of shoppingList) {
     const savedItem = await upsertShoppingListItem({
@@ -106,20 +231,23 @@ export const getShoppingList = async (user_id, start_date, end_date) => {
       week_start_date: start_date,
       ingredient_name: item.ingredient_name,
       required_quantity: item.required_quantity,
-      purchased_quantity: 0,
+      quantity_to_buy: item.quantity_to_buy,
       unit: item.unit,
+      status: item.status,
     });
 
-    // Add database information to the shopping item
     item.id = savedItem.id;
     item.status = savedItem.status;
-    console.log("SAVED ITEM:", savedItem);
   }
 
-  return shoppingList;
-};
+    return shoppingList;
+  };
 
-export const updateShoppingListStatusService = async ({id, user_id, status}) => {
+export const updateShoppingListStatusService = async ({
+  id,
+  user_id,
+  status,
+}) => {
   const item = await updateShoppingListStatus({
     id,
     user_id,
@@ -129,6 +257,11 @@ export const updateShoppingListStatusService = async ({id, user_id, status}) => 
   if (!item) {
     throw new Error("Shopping list item not found");
   }
-  console.log("UPDATE SHOPPING LIST STATUS SERVICE:", item)
+
+  console.log(
+    "UPDATE SHOPPING LIST STATUS SERVICE:",
+    item,
+  );
+
   return item;
 };

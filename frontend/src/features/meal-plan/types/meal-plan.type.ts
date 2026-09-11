@@ -1,8 +1,4 @@
-export type MealType =
-  | "BREAKFAST"
-  | "LUNCH"
-  | "DINNER"
-  | "SNACK";
+export type MealType = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
 
 export interface CreateMealPlan {
   meal_date: string;
@@ -37,5 +33,20 @@ export interface GetMealPlansResponse {
     start_date: string;
     end_date: string;
     meal_plans: MealPlan[];
+  };
+}
+
+export interface DeleteMealPlanResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    user_id: string;
+    recipe_id: string;
+    meal_date: string;
+    meal_type: string;
+    notes: string;
+    created_at: string;
+    updated_at: string;
   };
 }

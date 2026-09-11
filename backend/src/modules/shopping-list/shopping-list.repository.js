@@ -90,12 +90,37 @@ export const createShoppingListItem = async ({
   return rows[0]
 };
 
+// export const getExistingShoppingList = async ({user_id, week_start_date}) => {
+//   const query = `
+//     SELECT
+//       id,
+//       ingredient_name,
+//       quantity,
+//       unit,
+//       status,
+//       week_start_date
+//     FROM shopping_list
+//     WHERE user_id = $1
+//       AND week_start_date = $2
+//     ORDER BY id ASC;
+//   `;
+
+//   const { rows } = await pool.query(query, [
+//     user_id,
+//     week_start_date,
+//   ]);
+
+//   return rows;
+// }
+
 export const getExistingShoppingList = async ({user_id, week_start_date}) => {
   const query = `
     SELECT
       id,
       ingredient_name,
-      quantity,
+      required_quantity,
+      purchased_quantity,
+      quantity_to_buy,
       unit,
       status,
       week_start_date
@@ -111,15 +136,16 @@ export const getExistingShoppingList = async ({user_id, week_start_date}) => {
   ]);
 
   return rows;
-}
+};
 
 export const upsertShoppingListItem = async ({
   user_id,
   week_start_date,
   ingredient_name,
   required_quantity,
-  purchased_quantity,
+  quantity_to_buy,
   unit,
+  status,
 }) => {
   const query = `
     INSERT INTO shopping_list (
@@ -137,14 +163,10 @@ export const upsertShoppingListItem = async ({
       $2,
       $3,
       $4::NUMERIC,
+      0,
       $5::NUMERIC,
-      GREATEST($4::NUMERIC - $5::NUMERIC, 0),
       $6,
-      CASE
-        WHEN $4::NUMERIC - $5::NUMERIC <= 0
-        THEN 'PURCHASED'
-        ELSE 'PENDING'
-      END
+      $7
     )
 
     ON CONFLICT (
@@ -153,9 +175,19 @@ export const upsertShoppingListItem = async ({
       ingredient_name,
       unit
     )
+
     DO UPDATE SET
+
+      -- Update the TOTAL requirement
       required_quantity = EXCLUDED.required_quantity,
 
+      -- VERY IMPORTANT:
+      -- DO NOT change purchased_quantity here.
+      -- Keep whatever was already purchased.
+      purchased_quantity = shopping_list.purchased_quantity,
+
+      -- Calculate remaining amount using
+      -- the existing purchased quantity
       quantity_to_buy = GREATEST(
         EXCLUDED.required_quantity
         - shopping_list.purchased_quantity,
@@ -164,7 +196,7 @@ export const upsertShoppingListItem = async ({
 
       status = CASE
         WHEN EXCLUDED.required_quantity
-             <= shopping_list.purchased_quantity
+             - shopping_list.purchased_quantity <= 0
         THEN 'PURCHASED'
         ELSE 'PENDING'
       END,
@@ -179,16 +211,92 @@ export const upsertShoppingListItem = async ({
     week_start_date,
     ingredient_name,
     required_quantity,
-    purchased_quantity,
+    quantity_to_buy,
     unit,
+    status,
   ];
-
-  console.log("UPSERT VALUES:", values);
 
   const { rows } = await pool.query(query, values);
 
   return rows[0];
 };
+
+// export const upsertShoppingListItem = async ({
+//   user_id,
+//   week_start_date,
+//   ingredient_name,
+//   required_quantity,
+//   purchased_quantity,
+//   unit,
+// }) => {
+//   const query = `
+//     INSERT INTO shopping_list (
+//       user_id,
+//       week_start_date,
+//       ingredient_name,
+//       required_quantity,
+//       purchased_quantity,
+//       quantity_to_buy,
+//       unit,
+//       status
+//     )
+//     VALUES (
+//       $1,
+//       $2,
+//       $3,
+//       $4::NUMERIC,
+//       $5::NUMERIC,
+//       GREATEST($4::NUMERIC - $5::NUMERIC, 0),
+//       $6,
+//       CASE
+//         WHEN $4::NUMERIC - $5::NUMERIC <= 0
+//         THEN 'PURCHASED'
+//         ELSE 'PENDING'
+//       END
+//     )
+
+//     ON CONFLICT (
+//       user_id,
+//       week_start_date,
+//       ingredient_name,
+//       unit
+//     )
+//     DO UPDATE SET
+//       required_quantity = EXCLUDED.required_quantity,
+
+//       quantity_to_buy = GREATEST(
+//         EXCLUDED.required_quantity
+//         - shopping_list.purchased_quantity,
+//         0
+//       ),
+
+//       status = CASE
+//         WHEN EXCLUDED.required_quantity
+//           <= shopping_list.purchased_quantity
+//         THEN 'PURCHASED'
+//         ELSE 'PENDING'
+//       END,
+
+//       updated_at = CURRENT_TIMESTAMP
+
+//     RETURNING *;
+//   `;
+
+//   const values = [
+//     user_id,
+//     week_start_date,
+//     ingredient_name,
+//     required_quantity,
+//     purchased_quantity,
+//     unit,
+//   ];
+
+//   console.log("UPSERT VALUES:", values);
+
+//   const { rows } = await pool.query(query, values);
+
+//   return rows[0];
+// };
 
 export const updateShoppingListStatus = async ({
   id,
@@ -221,8 +329,6 @@ export const updateShoppingListStatus = async ({
   `;
 
   const values = [status, id, user_id];
-
-  console.log("UPDATE STATUS VALUES:", values);
 
   const { rows } = await pool.query(query, values);
 
