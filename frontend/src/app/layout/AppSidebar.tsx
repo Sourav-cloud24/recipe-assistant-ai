@@ -22,6 +22,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useLogout } from "@/hooks/useLogout";
 
 const menuItems = [
   {
@@ -63,6 +64,11 @@ const menuItems = [
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const logout = useLogout()
+
+  const handleLogout = () => {
+    logout()
+  }
 
   return (
     <Sidebar
@@ -168,6 +174,7 @@ export default function AppSidebar() {
               borderColor: "var(--border)",
               color: "var(--primary)",
             }}
+            onClick={handleLogout}
           >
             <LogOut size={16} />
             Logout
