@@ -26,6 +26,7 @@ const SignIn = () => {
 
     onSuccess: (response) => {
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("userDetails", JSON.stringify(response.data.user));
       toast.success(response.message);
       router.push("/dashboard")
     },
@@ -39,8 +40,7 @@ const SignIn = () => {
     mutate(data);
   };
   return (
-    <div className="w-screen h-screen flex justify-center items-center bg-gray-900 p-8 border-r border-dashed">
-      <div className="w-xl shadow-lg rounded-md bg-white p-8 flex flex-col">
+    <div className="flex w-full max-w-xl flex-col rounded-md bg-white p-8 shadow-lg text-black">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           {/* Email */}
           <div>
@@ -98,7 +98,6 @@ const SignIn = () => {
             Register
           </Link>
         </p>
-      </div>
     </div>
   );
 };

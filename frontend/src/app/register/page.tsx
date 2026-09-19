@@ -1,7 +1,12 @@
-import SignUp from "@/features/auth/components/SignUp"
+import AuthLayout from "../layout/AuthLayout";
+import SignUp from "@/features/auth/components/SignUp";
 
 const SignUpPage = () => {
-    return <SignUp/>
-}
+    return (
+        <AuthLayout>
+            <SignUp />
+        </AuthLayout>
+    );
+};
 
-export default SignUpPage
+export default SignUpPage;

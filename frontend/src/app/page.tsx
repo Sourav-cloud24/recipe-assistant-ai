@@ -1,10 +1,10 @@
 import SignIn from "@/features/auth/components/SignIn";
-import Image from "next/image";
+import AuthLayout from "./layout/AuthLayout";
 
 export default function Home() {
   return (
-    <div>
+    <AuthLayout>
       <SignIn/>
-    </div>
+    </AuthLayout>
   );
 }

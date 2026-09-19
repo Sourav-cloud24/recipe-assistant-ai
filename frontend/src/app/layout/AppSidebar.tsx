@@ -65,6 +65,8 @@ const menuItems = [
 export default function AppSidebar() {
   const pathname = usePathname();
   const logout = useLogout()
+  const userDetails = localStorage.getItem("userDetails");
+  const getUserData = userDetails ? JSON.parse(userDetails) : null;
 
   const handleLogout = () => {
     logout()
@@ -159,11 +161,11 @@ export default function AppSidebar() {
 
             <div className="flex-1">
               <p className="text-sm font-semibold" style={{ color: "var(--sidebar-foreground)" }}>
-                Sourav Dash
+                {getUserData?.fullname}
               </p>
 
               <p className="text-xs" style={{ color: "var(--muted)" }}>
-                Software Developer
+                {getUserData?.email}
               </p>
             </div>
           </div>
